@@ -3,6 +3,7 @@
 
   const STORAGE_KEY = "expense-tracker-transactions";
   const STORAGE_KEY_GOAL = "expense-tracker-goal";
+  const STORAGE_KEY_THEME = "expense-tracker-theme";
 
   const CATEGORIES = {
     despesa: [
@@ -76,6 +77,8 @@
   const syncLabel = document.getElementById("sync-label");
   const syncStatus = document.getElementById("sync-status");
 
+  const themeSwatches = document.querySelectorAll(".theme-swatch");
+
   const goalInput = document.getElementById("goal-input");
   const goalProgressValue = document.getElementById("goal-progress-value");
   const goalProgressFill = document.getElementById("goal-progress-fill");
@@ -89,6 +92,7 @@
 
   dateInput.value = toISODate(new Date());
   populateCategorySelect();
+  applyTheme(document.documentElement.getAttribute("data-theme") || "dark");
   render();
 
   // ---- Events ----
@@ -176,6 +180,29 @@
 
     renderGoals();
   });
+
+  themeSwatches.forEach((swatch) => {
+    swatch.addEventListener("click", () => {
+      applyTheme(swatch.dataset.theme);
+      try {
+        localStorage.setItem(STORAGE_KEY_THEME, swatch.dataset.theme);
+      } catch (err) {
+        console.warn("Não foi possível salvar o tema:", err);
+      }
+    });
+  });
+
+  function applyTheme(theme) {
+    if (theme && theme !== "dark") {
+      document.documentElement.setAttribute("data-theme", theme);
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+      theme = "dark";
+    }
+    themeSwatches.forEach((swatch) => {
+      swatch.classList.toggle("active", swatch.dataset.theme === theme);
+    });
+  }
 
   syncBtn.addEventListener("click", () => {
     if (cloudUser) {

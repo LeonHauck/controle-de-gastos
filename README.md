@@ -1,6 +1,6 @@
 # 💰 Controle de Gastos
 
-Rastreador de despesas e receitas pessoais, com visual moderno em dark mode. Feito em HTML, CSS e JavaScript puros (sem build tools), rodando 100% no navegador.
+Rastreador de despesas e receitas pessoais, com visual moderno e 5 temas à escolha. Feito em HTML, CSS e JavaScript puros (sem build tools), rodando 100% no navegador.
 
 🔗 **Acesse online:** https://leonhauck.github.io/controle-de-gastos/
 
@@ -12,6 +12,7 @@ Rastreador de despesas e receitas pessoais, com visual moderno em dark mode. Fei
 - Gráfico de despesas por categoria, com percentual sobre o total
 - Painel de metas e previsão: meta de economia mensal, previsão de gastos do próximo mês (média dos últimos meses fechados) e receita necessária para cobrir gastos + bater a meta
 - Exclusão de transações
+- 5 temas de cores (Dark, Claro, Meia-noite, Floresta, Pôr do sol), salvos por dispositivo
 - Sincronização entre dispositivos com login do Google (Firebase Auth + Firestore)
 - Funciona offline com `localStorage` quando não está logado
 

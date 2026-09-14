@@ -9,6 +9,16 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem("expense-tracker-theme");
+        if (saved && saved !== "dark") {
+          document.documentElement.setAttribute("data-theme", saved);
+        }
+      } catch (err) {}
+    })();
+  </script>
 </head>
 <body>
   <div class="app">
@@ -30,6 +40,13 @@
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M17.65 6.35A8 8 0 1 0 19.5 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M20 3v6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <span id="sync-label">Sincronizar</span>
         </button>
+        <div class="theme-picker" role="group" aria-label="Tema do app">
+          <button type="button" class="theme-swatch" data-theme="dark" style="--swatch: #6d8cff" aria-label="Tema Dark" title="Dark"></button>
+          <button type="button" class="theme-swatch" data-theme="light" style="--swatch: #2a78d6" aria-label="Tema Claro" title="Claro"></button>
+          <button type="button" class="theme-swatch" data-theme="midnight" style="--swatch: #7c5cff" aria-label="Tema Meia-noite" title="Meia-noite"></button>
+          <button type="button" class="theme-swatch" data-theme="forest" style="--swatch: #34d399" aria-label="Tema Floresta" title="Floresta"></button>
+          <button type="button" class="theme-swatch" data-theme="sunset" style="--swatch: #ff8a4c" aria-label="Tema Pôr do sol" title="Pôr do sol"></button>
+        </div>
       </div>
     </header>
     <p id="sync-status" class="sync-status" hidden></p>
