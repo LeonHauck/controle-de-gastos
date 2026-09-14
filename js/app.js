@@ -235,10 +235,10 @@
       const amountClass = t.type === "receita" ? "amount-receita" : "amount-despesa";
 
       tr.innerHTML = `
-        <td>${dateFormatter.format(new Date(t.date + "T00:00:00Z"))}</td>
-        <td>${escapeHtml(t.description || "(sem descrição)")}</td>
-        <td><span class="cat-badge"><span class="cat-dot" style="background:${meta.color}; color:${meta.color};"></span>${escapeHtml(meta.label)}</span></td>
-        <td class="amount-cell ${amountClass}">${sign} ${currencyFormatter.format(t.amount)}</td>
+        <td data-label="Data">${dateFormatter.format(new Date(t.date + "T00:00:00Z"))}</td>
+        <td data-label="Descrição">${escapeHtml(t.description || "(sem descrição)")}</td>
+        <td data-label="Categoria"><span class="cat-badge"><span class="cat-dot" style="background:${meta.color}; color:${meta.color};"></span>${escapeHtml(meta.label)}</span></td>
+        <td data-label="Valor" class="amount-cell ${amountClass}">${sign} ${currencyFormatter.format(t.amount)}</td>
         <td class="col-actions">
           <button class="delete-btn" data-id="${t.id}" aria-label="Excluir transação">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m2 0-1 13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
