@@ -45,6 +45,8 @@
   let transactions = loadTransactions();
   let currentType = "despesa";
   let selectedPeriod = "all";
+  let cloudUser = null;
+  let unsubscribeCloud = null;
 
   // ---- DOM refs ----
 
@@ -67,6 +69,10 @@
 
   const tbody = document.getElementById("transactions-body");
   const tableEmpty = document.getElementById("table-empty");
+
+  const syncBtn = document.getElementById("sync-btn");
+  const syncLabel = document.getElementById("sync-label");
+  const syncStatus = document.getElementById("sync-status");
 
   // ---- Init ----
 
@@ -94,34 +100,128 @@
     const amount = parseFloat(amountInput.value);
     if (!amount || amount <= 0) return;
 
-    transactions.push({
-      id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+    const data = {
       type: currentType,
       description: descriptionInput.value.trim(),
       amount: amount,
       category: categorySelect.value,
       date: dateInput.value,
-    });
+    };
 
-    saveTransactions();
+    if (cloudUser) {
+      userCollection(cloudUser.uid)
+        .add(data)
+        .catch((err) => {
+          console.warn("Erro ao salvar na nuvem:", err);
+          alert("Não foi possível salvar. Verifique sua conexão e tente novamente.");
+        });
+    } else {
+      transactions.push({
+        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+        ...data,
+      });
+      saveTransactions();
+      render();
+    }
+
     form.reset();
     dateInput.value = toISODate(new Date());
     typeButtons[0].click();
-    render();
   });
 
   tbody.addEventListener("click", (e) => {
     const btn = e.target.closest(".delete-btn");
     if (!btn) return;
     const id = btn.dataset.id;
-    transactions = transactions.filter((t) => t.id !== id);
-    saveTransactions();
-    render();
+
+    if (cloudUser) {
+      userCollection(cloudUser.uid)
+        .doc(id)
+        .delete()
+        .catch((err) => console.warn("Erro ao excluir na nuvem:", err));
+    } else {
+      transactions = transactions.filter((t) => t.id !== id);
+      saveTransactions();
+      render();
+    }
   });
 
   periodSelect.addEventListener("change", () => {
     selectedPeriod = periodSelect.value;
     render();
+  });
+
+  syncBtn.addEventListener("click", () => {
+    if (cloudUser) {
+      auth.signOut();
+      return;
+    }
+    const provider = new firebase.auth.GoogleAuthProvider();
+    syncBtn.disabled = true;
+    auth
+      .signInWithPopup(provider)
+      .catch((err) => {
+        console.warn("Falha no login:", err);
+        alert("Não foi possível entrar com o Google. Tente novamente.");
+      })
+      .finally(() => {
+        syncBtn.disabled = false;
+      });
+  });
+
+  // ---- Cloud sync (Firebase) ----
+
+  function userCollection(uid) {
+    return db.collection("users").doc(uid).collection("transactions");
+  }
+
+  function subscribeCloud(uid) {
+    unsubscribeCloud = userCollection(uid).onSnapshot(
+      (snapshot) => {
+        transactions = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        render();
+      },
+      (err) => console.warn("Erro ao sincronizar:", err)
+    );
+  }
+
+  auth.onAuthStateChanged(async (user) => {
+    if (unsubscribeCloud) {
+      unsubscribeCloud();
+      unsubscribeCloud = null;
+    }
+
+    if (user) {
+      const localBackup = transactions;
+      cloudUser = user;
+      syncBtn.classList.add("active");
+      syncLabel.textContent = "Sair";
+      syncStatus.hidden = false;
+      syncStatus.textContent = `Sincronizado como ${user.email}`;
+
+      try {
+        const snapshot = await userCollection(user.uid).limit(1).get();
+        if (snapshot.empty && localBackup.length > 0) {
+          const batch = db.batch();
+          localBackup.forEach((t) => {
+            const { id, ...data } = t;
+            batch.set(userCollection(user.uid).doc(), data);
+          });
+          await batch.commit();
+        }
+      } catch (err) {
+        console.warn("Erro ao migrar dados locais para a nuvem:", err);
+      }
+
+      subscribeCloud(user.uid);
+    } else {
+      cloudUser = null;
+      syncBtn.classList.remove("active");
+      syncLabel.textContent = "Sincronizar";
+      syncStatus.hidden = true;
+      transactions = loadTransactions();
+      render();
+    }
   });
 
   // ---- Rendering ----

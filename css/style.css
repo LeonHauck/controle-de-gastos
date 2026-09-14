@@ -127,6 +127,51 @@ input:focus {
   font-weight: 500;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sync-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.sync-btn:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.sync-btn.active {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.35);
+  color: var(--good);
+}
+
+.sync-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.sync-status {
+  margin: -18px 0 24px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
 /* Hero summary */
 .hero-grid {
   display: grid;
@@ -592,6 +637,20 @@ tbody tr:last-child td {
 
   .period-filter {
     width: 100%;
+  }
+
+  .header-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sync-btn {
+    justify-content: center;
+  }
+
+  .sync-status {
+    margin-top: -12px;
   }
 }
 
