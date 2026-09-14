@@ -1,10 +1,10 @@
-# Controle de Gastos
+# 💰 Controle de Gastos
 
 Rastreador de despesas e receitas pessoais, com visual moderno em dark mode. Feito em HTML, CSS e JavaScript puros (sem build tools), rodando 100% no navegador.
 
 🔗 **Acesse online:** https://leonhauck.github.io/controle-de-gastos/
 
-## Funcionalidades
+## ✨ Funcionalidades
 
 - Cadastro de despesas e receitas (descrição, valor, categoria, data)
 - Filtro por período (mês)
@@ -13,11 +13,11 @@ Rastreador de despesas e receitas pessoais, com visual moderno em dark mode. Fei
 - Exclusão de transações
 - Dados salvos localmente no navegador (`localStorage`)
 
-## Como usar
+## 🚀 Como usar
 
 Basta abrir o arquivo [index.html](index.html) diretamente no navegador — não é necessário instalar nada ou rodar um servidor.
 
-## Estrutura
+## 📁 Estrutura
 
 ```
 index.html      # marcação e estrutura da página
@@ -25,12 +25,14 @@ css/style.css   # tema dark e layout
 js/app.js       # lógica da aplicação (estado, persistência, renderização)
 ```
 
-## Hospedagem
+## 🌐 Hospedagem
 
 Publicado via [GitHub Pages](https://pages.github.com/), a partir da branch `master`.
 
-⚠️ Os dados ficam salvos apenas no navegador de cada dispositivo (não há backend/sincronização entre dispositivos nesta versão).
+## ⚠️ Dados
+
+Os dados ficam salvos apenas no navegador de cada dispositivo (não há backend/sincronização entre dispositivos nesta versão).
 
 ---
 
-Desenvolvido por Leon Hauck
+👤 Desenvolvido por **Leon Hauck**
