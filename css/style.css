@@ -259,6 +259,87 @@ input:focus {
   box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--swatch);
 }
 
+/* Monthly recap banner */
+.month-banner {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 44px 16px 18px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  margin-bottom: 20px;
+}
+
+.month-banner.success {
+  background: color-mix(in oklab, var(--good) 10%, var(--surface));
+  border-color: color-mix(in oklab, var(--good) 35%, transparent);
+}
+
+.month-banner.miss {
+  background: color-mix(in oklab, var(--accent) 10%, var(--surface));
+  border-color: color-mix(in oklab, var(--accent) 30%, transparent);
+}
+
+.month-banner-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+}
+
+.month-banner.success .month-banner-icon {
+  background: color-mix(in oklab, var(--good) 20%, transparent);
+  color: var(--good);
+}
+
+.month-banner.miss .month-banner-icon {
+  background: color-mix(in oklab, var(--accent) 20%, transparent);
+  color: var(--accent);
+}
+
+.month-banner-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.month-banner-body strong {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.month-banner-body p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.month-banner-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  transition: color 0.15s, background 0.15s;
+}
+
+.month-banner-close:hover {
+  color: var(--text-primary);
+  background: var(--surface-raised);
+}
+
 /* Hero summary */
 .hero-grid {
   display: grid;

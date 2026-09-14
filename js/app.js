@@ -42,6 +42,30 @@
     timeZone: "UTC",
   });
 
+  const TROPHY_ICON =
+    '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M8 21h8M12 17v4M7 4h10v3a5 5 0 0 1-10 0V4Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 5H4a1 1 0 0 0-1 1v1a4 4 0 0 0 4 4M17 5h3a1 1 0 0 1 1 1v1a4 4 0 0 1-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  const TRENDING_ICON =
+    '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M3 17l6-6 4 4 8-8M21 7h-5v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  const RECAP_SUCCESS_MESSAGES = [
+    (month, saved, goal) =>
+      `Mandou bem em ${month}! Você economizou ${currencyFormatter.format(saved)}, passando da meta de ${currencyFormatter.format(goal)}. Bora manter o ritmo!`,
+    (month, saved, goal) =>
+      `${month} fechou no azul: ${currencyFormatter.format(saved)} guardados, meta de ${currencyFormatter.format(goal)} batida com folga. Você tá voando!`,
+    (month, saved, goal) =>
+      `Meta batida em ${month}! ${currencyFormatter.format(saved)} no bolso, acima dos ${currencyFormatter.format(goal)} planejados. Se continuar assim, vira hábito.`,
+  ];
+
+  const RECAP_MISS_MESSAGES = [
+    (month, saved, goal) =>
+      `Em ${month} você economizou ${currencyFormatter.format(saved)}, um pouco abaixo da meta de ${currencyFormatter.format(goal)}. Mês novo, chance nova — bora tentar de novo?`,
+    (month, saved, goal) =>
+      `Quase lá! ${currencyFormatter.format(saved)} guardados em ${month}, faltou um pouco pra bater os ${currencyFormatter.format(goal)} da meta. Ajusta o cinto esse mês?`,
+    (month, saved, goal) =>
+      `${month} não bateu a meta (${currencyFormatter.format(saved)} de ${currencyFormatter.format(goal)}), mas cada real economizado conta. Vamos com tudo nesse mês!`,
+  ];
+
   // ---- State ----
 
   let transactions = loadTransactions();
@@ -78,6 +102,12 @@
   const syncStatus = document.getElementById("sync-status");
 
   const themeSwatches = document.querySelectorAll(".theme-swatch");
+
+  const monthBanner = document.getElementById("month-banner");
+  const monthBannerIcon = document.getElementById("month-banner-icon");
+  const monthBannerTitle = document.getElementById("month-banner-title");
+  const monthBannerMessage = document.getElementById("month-banner-message");
+  const monthBannerClose = document.getElementById("month-banner-close");
 
   const goalInput = document.getElementById("goal-input");
   const goalProgressValue = document.getElementById("goal-progress-value");
@@ -179,6 +209,10 @@
     }
 
     renderGoals();
+  });
+
+  monthBannerClose.addEventListener("click", () => {
+    monthBanner.hidden = true;
   });
 
   themeSwatches.forEach((swatch) => {
@@ -302,6 +336,7 @@
     renderChart(filtered);
     renderTable(filtered);
     renderGoals();
+    checkMonthlyRecap();
   }
 
   function renderPeriodOptions() {
@@ -507,6 +542,51 @@
       localStorage.setItem(STORAGE_KEY_GOAL, String(amount));
     } catch (err) {
       console.warn("Não foi possível salvar a meta:", err);
+    }
+  }
+
+  // ---- Recap mensal ----
+
+  function getPrevMonthKey() {
+    const currentKey = toISODate(new Date()).slice(0, 7);
+    const [y, m] = currentKey.split("-").map(Number);
+    const prevDate = new Date(Date.UTC(y, m - 2, 1));
+    return prevDate.toISOString().slice(0, 7);
+  }
+
+  function checkMonthlyRecap() {
+    if (monthlyGoal <= 0) return;
+
+    const prevKey = getPrevMonthKey();
+    const prevTx = transactions.filter((t) => t.date.slice(0, 7) === prevKey);
+    if (prevTx.length === 0) return;
+
+    const noticeKey = "expense-tracker-recap-" + prevKey;
+    let alreadyShown;
+    try {
+      alreadyShown = localStorage.getItem(noticeKey);
+    } catch (err) {
+      alreadyShown = null;
+    }
+    if (alreadyShown) return;
+
+    const saved = sumBy(prevTx, "receita") - sumBy(prevTx, "despesa");
+    const hit = saved >= monthlyGoal;
+    const monthLabel = capitalize(monthFormatter.format(new Date(prevKey + "-02T00:00:00Z")));
+    const pool = hit ? RECAP_SUCCESS_MESSAGES : RECAP_MISS_MESSAGES;
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+
+    monthBanner.classList.toggle("success", hit);
+    monthBanner.classList.toggle("miss", !hit);
+    monthBannerIcon.innerHTML = hit ? TROPHY_ICON : TRENDING_ICON;
+    monthBannerTitle.textContent = hit ? "Meta batida!" : "Quase lá!";
+    monthBannerMessage.textContent = pick(monthLabel, saved, monthlyGoal);
+    monthBanner.hidden = false;
+
+    try {
+      localStorage.setItem(noticeKey, "1");
+    } catch (err) {
+      console.warn("Não foi possível salvar o aviso do mês:", err);
     }
   }
 

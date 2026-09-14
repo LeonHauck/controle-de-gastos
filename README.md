@@ -11,6 +11,7 @@ Rastreador de despesas e receitas pessoais, com visual moderno e 5 temas à esco
 - Resumo do período: receitas, despesas, saldo e número de transações
 - Gráfico de despesas por categoria, com percentual sobre o total
 - Painel de metas e previsão: meta de economia mensal, previsão de gastos do próximo mês (média dos últimos meses fechados) e receita necessária para cobrir gastos + bater a meta
+- Recap do mês fechado: aviso descontraído dizendo se você bateu ou não a meta do mês anterior
 - Exclusão de transações
 - 5 temas de cores (Dark, Claro, Meia-noite, Floresta, Pôr do sol), salvos por dispositivo
 - Sincronização entre dispositivos com login do Google (Firebase Auth + Firestore)
