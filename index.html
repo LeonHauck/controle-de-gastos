@@ -36,6 +36,10 @@
           <label for="period-select" class="visually-hidden">Período</label>
           <select id="period-select"></select>
         </div>
+        <button type="button" id="history-btn" class="sync-btn" hidden>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 1 0 3-6.7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 4v5h5M12 7v5l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Histórico</span>
+        </button>
         <button type="button" id="sync-btn" class="sync-btn">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M17.65 6.35A8 8 0 1 0 19.5 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M20 3v6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <span id="sync-label">Sincronizar</span>
@@ -50,17 +54,6 @@
       </div>
     </header>
     <p id="sync-status" class="sync-status" hidden></p>
-
-    <div id="month-banner" class="month-banner" hidden>
-      <span class="month-banner-icon" id="month-banner-icon" aria-hidden="true"></span>
-      <div class="month-banner-body">
-        <strong id="month-banner-title"></strong>
-        <p id="month-banner-message"></p>
-      </div>
-      <button type="button" class="month-banner-close" id="month-banner-close" aria-label="Fechar aviso">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-      </button>
-    </div>
 
     <section class="hero-grid" aria-label="Resumo do período">
       <div class="hero-balance">
@@ -197,6 +190,59 @@
     </section>
 
     <footer class="app-footer">Desenvolvido por Leon Hauck</footer>
+  </div>
+
+  <div id="month-modal-overlay" class="modal-overlay" hidden>
+    <div class="modal-card" id="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-month-title">
+      <button type="button" class="modal-close" id="modal-close" aria-label="Fechar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+
+      <div class="modal-nav">
+        <button type="button" class="modal-nav-btn" id="modal-prev" aria-label="Mês anterior">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <h2 id="modal-month-title">—</h2>
+        <button type="button" class="modal-nav-btn" id="modal-next" aria-label="Próximo mês">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+
+      <p class="modal-flavor" id="modal-flavor"></p>
+
+      <div class="modal-level" id="modal-level">
+        <div class="modal-level-top">
+          <span class="modal-level-label">Meta do mês</span>
+          <span class="modal-level-pct" id="modal-level-pct">0%</span>
+        </div>
+        <div class="modal-level-track">
+          <div class="modal-level-fill" id="modal-level-fill" style="width:0%"></div>
+        </div>
+        <div class="modal-level-bottom">
+          <span id="modal-level-saved">R$ 0,00</span>
+          <span id="modal-level-goal">de R$ 0,00</span>
+        </div>
+        <span class="modal-level-status" id="modal-level-status"></span>
+      </div>
+
+      <div class="modal-insights" id="modal-insights"></div>
+
+      <div class="modal-badges" id="modal-badges"></div>
+
+      <div class="modal-section">
+        <h3>Despesas por categoria</h3>
+        <div class="modal-bars" id="modal-expense-bars">
+          <p class="empty-state" id="modal-expense-empty">Sem despesas nesse mês.</p>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <h3>Receitas por categoria</h3>
+        <div class="modal-bars" id="modal-income-bars">
+          <p class="empty-state" id="modal-income-empty">Sem receitas nesse mês.</p>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>

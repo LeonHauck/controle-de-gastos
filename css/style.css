@@ -265,72 +265,58 @@ input:focus {
   box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--swatch);
 }
 
-/* Monthly recap banner */
-.month-banner {
-  position: relative;
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  padding: 16px 44px 16px 18px;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-strong);
-  background: var(--surface);
-  margin-bottom: 20px;
-}
-
-.month-banner.success {
-  background: color-mix(in oklab, var(--good) 10%, var(--surface));
-  border-color: color-mix(in oklab, var(--good) 35%, transparent);
-}
-
-.month-banner.miss {
-  background: color-mix(in oklab, var(--accent) 10%, var(--surface));
-  border-color: color-mix(in oklab, var(--accent) 30%, transparent);
-}
-
-.month-banner-icon {
-  flex-shrink: 0;
+/* Month report modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
+  padding: 20px;
+  z-index: 100;
+  animation: modal-fade-in 0.2s ease;
 }
 
-.month-banner.success .month-banner-icon {
-  background: color-mix(in oklab, var(--good) 20%, transparent);
-  color: var(--good);
+@keyframes modal-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
-.month-banner.miss .month-banner-icon {
-  background: color-mix(in oklab, var(--accent) 20%, transparent);
-  color: var(--accent);
+.modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: linear-gradient(165deg, var(--surface) 0%, var(--surface-raised) 100%);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: 26px 24px;
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.5);
+  animation: modal-pop-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.month-banner-body {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+@keyframes modal-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
-.month-banner-body strong {
-  font-family: var(--font-display);
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-
-.month-banner-body p {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  line-height: 1.45;
-}
-
-.month-banner-close {
+.modal-close {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 16px;
+  right: 16px;
   background: none;
   border: none;
   color: var(--text-muted);
@@ -341,9 +327,200 @@ input:focus {
   transition: color 0.15s, background 0.15s;
 }
 
-.month-banner-close:hover {
+.modal-close:hover {
   color: var(--text-primary);
   background: var(--surface-raised);
+}
+
+.modal-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 4px;
+}
+
+.modal-nav h2 {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: 0;
+  min-width: 160px;
+  text-align: center;
+}
+
+.modal-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.modal-nav-btn:hover:not(:disabled) {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.modal-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.modal-flavor {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 6px 0 20px;
+  line-height: 1.45;
+}
+
+.modal-level {
+  margin-bottom: 18px;
+}
+
+.modal-level-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.modal-level-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.modal-level-pct {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.modal-level-track {
+  height: 20px;
+  border-radius: 999px;
+  background: var(--gridline);
+  overflow: hidden;
+  position: relative;
+}
+
+.modal-level-fill {
+  height: 100%;
+  border-radius: 999px;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.modal-level-fill.over {
+  box-shadow: 0 0 14px 2px color-mix(in oklab, var(--accent-2) 70%, transparent);
+}
+
+.modal-level-bottom {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 7px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.modal-level-status {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.modal-level-status.hit {
+  background: color-mix(in oklab, var(--good) 16%, transparent);
+  color: var(--good);
+}
+
+.modal-level-status.miss {
+  background: color-mix(in oklab, var(--critical) 16%, transparent);
+  color: var(--critical);
+}
+
+.modal-insights {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.modal-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+  min-height: 1px;
+}
+
+.modal-badges:empty {
+  margin-bottom: 0;
+}
+
+.modal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  opacity: 0;
+  transform: scale(0.6);
+}
+
+.modal-badge.reveal {
+  animation: badge-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes badge-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4) rotate(-8deg);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.12) rotate(3deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+.modal-section {
+  margin-bottom: 18px;
+}
+
+.modal-section h3 {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+
+.modal-section .chart-row .chart-fill {
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Hero summary */
@@ -1049,6 +1226,16 @@ tbody tr:last-child td {
 
   .sync-status {
     margin-top: -12px;
+  }
+
+  .modal-card {
+    padding: 22px 18px;
+    max-height: 88vh;
+  }
+
+  .modal-nav h2 {
+    min-width: 0;
+    font-size: 1.02rem;
   }
 }
 

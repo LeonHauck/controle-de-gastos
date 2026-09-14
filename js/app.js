@@ -104,6 +104,8 @@
   let monthlyGoal = loadGoalLocal();
   let goalHistory = loadGoalHistoryLocal();
   let achievements = loadAchievementsLocal();
+  let modalMonthKeys = [];
+  let modalCurrentIndex = -1;
 
   // ---- DOM refs ----
 
@@ -133,11 +135,26 @@
 
   const themeSwatches = document.querySelectorAll(".theme-swatch");
 
-  const monthBanner = document.getElementById("month-banner");
-  const monthBannerIcon = document.getElementById("month-banner-icon");
-  const monthBannerTitle = document.getElementById("month-banner-title");
-  const monthBannerMessage = document.getElementById("month-banner-message");
-  const monthBannerClose = document.getElementById("month-banner-close");
+  const historyBtn = document.getElementById("history-btn");
+  const modalOverlay = document.getElementById("month-modal-overlay");
+  const modalCard = document.getElementById("modal-card");
+  const modalClose = document.getElementById("modal-close");
+  const modalPrev = document.getElementById("modal-prev");
+  const modalNext = document.getElementById("modal-next");
+  const modalMonthTitle = document.getElementById("modal-month-title");
+  const modalFlavor = document.getElementById("modal-flavor");
+  const modalLevelSection = document.getElementById("modal-level");
+  const modalLevelPct = document.getElementById("modal-level-pct");
+  const modalLevelFill = document.getElementById("modal-level-fill");
+  const modalLevelSaved = document.getElementById("modal-level-saved");
+  const modalLevelGoal = document.getElementById("modal-level-goal");
+  const modalLevelStatus = document.getElementById("modal-level-status");
+  const modalInsights = document.getElementById("modal-insights");
+  const modalBadges = document.getElementById("modal-badges");
+  const modalExpenseBars = document.getElementById("modal-expense-bars");
+  const modalExpenseEmpty = document.getElementById("modal-expense-empty");
+  const modalIncomeBars = document.getElementById("modal-income-bars");
+  const modalIncomeEmpty = document.getElementById("modal-income-empty");
 
   const goalInput = document.getElementById("goal-input");
   const goalProgressValue = document.getElementById("goal-progress-value");
@@ -251,9 +268,20 @@
     renderGoals();
   });
 
-  monthBannerClose.addEventListener("click", () => {
-    monthBanner.hidden = true;
+  historyBtn.addEventListener("click", () => {
+    const keys = getAvailableMonthKeys();
+    if (keys.length === 0) return;
+    openMonthModal(keys[keys.length - 1]);
   });
+
+  modalClose.addEventListener("click", closeMonthModal);
+
+  modalOverlay.addEventListener("click", (e) => {
+    if (e.target === modalOverlay) closeMonthModal();
+  });
+
+  modalPrev.addEventListener("click", () => navigateModal(-1));
+  modalNext.addEventListener("click", () => navigateModal(1));
 
   themeSwatches.forEach((swatch) => {
     swatch.addEventListener("click", () => {
@@ -398,7 +426,8 @@
     renderStreakBadge();
     updateAchievements();
     renderAchievements();
-    checkMonthlyRecap();
+    historyBtn.hidden = getAvailableMonthKeys().length === 0;
+    checkAutoMonthModal();
   }
 
   function renderPeriodOptions() {
@@ -449,41 +478,57 @@
     return list.filter((t) => t.type === type).reduce((acc, t) => acc + t.amount, 0);
   }
 
+  function categoryBreakdown(list, type) {
+    const filtered = list.filter((t) => t.type === type);
+    if (filtered.length === 0) return [];
+
+    const totals = {};
+    filtered.forEach((t) => {
+      totals[t.category] = (totals[t.category] || 0) + t.amount;
+    });
+
+    const total = Object.values(totals).reduce((acc, v) => acc + v, 0);
+    const max = Math.max(...Object.values(totals));
+
+    return Object.entries(totals)
+      .sort((a, b) => b[1] - a[1])
+      .map(([categoryId, value]) => {
+        const meta = findCategory(categoryId) || { label: categoryId, color: "var(--cat-8)" };
+        return {
+          id: categoryId,
+          label: meta.label,
+          color: meta.color,
+          value: value,
+          percent: total > 0 ? Math.round((value / total) * 100) : 0,
+          widthPct: max > 0 ? (value / max) * 100 : 0,
+        };
+      });
+  }
+
+  function buildCategoryBarRow(row, animate) {
+    const el = document.createElement("div");
+    el.className = "chart-row";
+    el.innerHTML = `
+      <span class="cat-label">${escapeHtml(row.label)}</span>
+      <span class="chart-track">
+        <span class="chart-fill" style="width:${animate ? 0 : row.widthPct}%; background:${row.color};"></span>
+      </span>
+      <span class="cat-value">${currencyFormatter.format(row.value)} <span class="cat-percent">· ${row.percent}%</span></span>
+    `;
+    return el;
+  }
+
   function renderChart(list) {
-    const despesas = list.filter((t) => t.type === "despesa");
+    const rows = categoryBreakdown(list, "despesa");
     chartContainer.querySelectorAll(".chart-row").forEach((el) => el.remove());
 
-    if (despesas.length === 0) {
+    if (rows.length === 0) {
       chartEmpty.hidden = false;
       return;
     }
     chartEmpty.hidden = true;
 
-    const totals = {};
-    despesas.forEach((t) => {
-      totals[t.category] = (totals[t.category] || 0) + t.amount;
-    });
-
-    const maxValue = Math.max(...Object.values(totals));
-    const totalDespesas = Object.values(totals).reduce((acc, v) => acc + v, 0);
-    const rows = Object.entries(totals)
-      .sort((a, b) => b[1] - a[1])
-      .map(([categoryId, value]) => {
-        const meta = findCategory(categoryId) || { label: categoryId, color: "var(--cat-8)" };
-        const percent = totalDespesas > 0 ? Math.round((value / totalDespesas) * 100) : 0;
-        const row = document.createElement("div");
-        row.className = "chart-row";
-        row.innerHTML = `
-          <span class="cat-label">${escapeHtml(meta.label)}</span>
-          <span class="chart-track">
-            <span class="chart-fill" style="width:${(value / maxValue) * 100}%; background:${meta.color};"></span>
-          </span>
-          <span class="cat-value">${currencyFormatter.format(value)} <span class="cat-percent">· ${percent}%</span></span>
-        `;
-        return row;
-      });
-
-    rows.forEach((row) => chartContainer.appendChild(row));
+    rows.forEach((row) => chartContainer.appendChild(buildCategoryBarRow(row, false)));
   }
 
   function renderTable(list) {
@@ -819,23 +864,216 @@
     }
   }
 
-  function getTopCategoryInsight(monthTx) {
-    const despesas = monthTx.filter((t) => t.type === "despesa");
-    if (despesas.length === 0) return null;
+  function getMonthBadges(monthKey, hit, saved, goalForMonth) {
+    const badges = { medal: !!hit, gem: null, trophy: null };
+    if (!hit) return badges;
 
-    const totals = {};
-    despesas.forEach((t) => {
-      totals[t.category] = (totals[t.category] || 0) + t.amount;
-    });
-    const totalDespesa = Object.values(totals).reduce((a, b) => a + b, 0);
-    const [topCatId, topVal] = Object.entries(totals).sort((a, b) => b[1] - a[1])[0];
-    const meta = findCategory(topCatId);
-    const percent = totalDespesa > 0 ? Math.round((topVal / totalDespesa) * 100) : 0;
+    if (goalForMonth > 0) {
+      const overRatio = (saved - goalForMonth) / goalForMonth;
+      badges.gem = OVERACHIEVE_TIERS.find((t) => overRatio >= t.threshold) || null;
+    }
 
-    return { label: meta ? meta.label : topCatId, percent };
+    const beforeKey = shiftMonthKey(monthKey, -1);
+    const current = getStreakInfo(monthKey);
+    const prior = getStreakInfo(beforeKey);
+    const currentMilestone = getMilestone(current.months, current.savings);
+    const priorMilestone = getMilestone(prior.months, prior.savings);
+    if (currentMilestone && currentMilestone !== priorMilestone) {
+      badges.trophy = currentMilestone;
+    }
+
+    return badges;
   }
 
-  function checkMonthlyRecap() {
+  function getMonthReport(monthKey) {
+    const tx = transactions.filter((t) => t.date.slice(0, 7) === monthKey);
+    const income = sumBy(tx, "receita");
+    const expense = sumBy(tx, "despesa");
+    const saved = income - expense;
+    const goalForMonth = lockGoalForMonth(monthKey);
+    const hasGoal = goalForMonth !== null && goalForMonth > 0;
+    const hit = hasGoal ? saved >= goalForMonth : null;
+    const pct = hasGoal ? (saved / goalForMonth) * 100 : null;
+    const monthLabel = capitalize(monthFormatter.format(new Date(monthKey + "-02T00:00:00Z")));
+
+    const despesaCats = categoryBreakdown(tx, "despesa");
+    const receitaCats = categoryBreakdown(tx, "receita");
+
+    const insights = [];
+    if (despesaCats.length > 0) {
+      const top = despesaCats[0];
+      insights.push(`Categoria que mais pesou: ${top.label} (${top.percent}% das despesas).`);
+    }
+
+    const beforeKey = shiftMonthKey(monthKey, -1);
+    const beforeExpense = sumBy(
+      transactions.filter((t) => t.date.slice(0, 7) === beforeKey),
+      "despesa"
+    );
+    if (beforeExpense > 0) {
+      const diffPct = Math.round(((expense - beforeExpense) / beforeExpense) * 100);
+      if (diffPct <= -5) insights.push(`Gastou ${Math.abs(diffPct)}% a menos que no mês anterior.`);
+      else if (diffPct >= 5) insights.push(`Gastou ${diffPct}% a mais que no mês anterior.`);
+    }
+
+    let flavor = "";
+    if (hasGoal) {
+      const pool = hit ? RECAP_SUCCESS_MESSAGES : RECAP_MISS_MESSAGES;
+      flavor = pool[Math.floor(Math.random() * pool.length)](monthLabel, saved, goalForMonth);
+    }
+
+    const badges = getMonthBadges(monthKey, hit, saved, goalForMonth || 0);
+
+    return { monthKey, monthLabel, income, expense, saved, goalForMonth, hasGoal, hit, pct, despesaCats, receitaCats, insights, flavor, badges };
+  }
+
+  // ---- Modal "fim de mês" ----
+
+  function getAvailableMonthKeys() {
+    const prevKey = getPrevMonthKey();
+    return Object.keys(getMonthlyBalances())
+      .filter((key) => key <= prevKey)
+      .sort();
+  }
+
+  function tierColor(tier) {
+    return (
+      {
+        bronze: "#cd7f32",
+        silver: "#9c9ca5",
+        gold: "#eab308",
+        emerald: "#10b981",
+        ruby: "#e11d48",
+        diamond: "#22d3ee",
+      }[tier] || "#eab308"
+    );
+  }
+
+  function buildModalCategoryBars(container, emptyEl, rows) {
+    container.querySelectorAll(".chart-row").forEach((el) => el.remove());
+    if (rows.length === 0) {
+      emptyEl.hidden = false;
+      return [];
+    }
+    emptyEl.hidden = true;
+
+    return rows.map((row) => {
+      const el = buildCategoryBarRow(row, true);
+      container.appendChild(el);
+      return { el: el.querySelector(".chart-fill"), target: row.widthPct };
+    });
+  }
+
+  function renderMonthModal() {
+    const monthKey = modalMonthKeys[modalCurrentIndex];
+    const report = getMonthReport(monthKey);
+
+    modalMonthTitle.textContent = report.monthLabel;
+    modalPrev.disabled = modalCurrentIndex <= 0;
+    modalNext.disabled = modalCurrentIndex >= modalMonthKeys.length - 1;
+
+    modalFlavor.hidden = !report.flavor;
+    modalFlavor.textContent = report.flavor;
+
+    modalLevelSection.hidden = !report.hasGoal;
+    let levelTarget = 0;
+    if (report.hasGoal) {
+      levelTarget = Math.max(0, Math.min(100, report.pct));
+      modalLevelPct.textContent = `${Math.round(report.pct)}%`;
+      modalLevelSaved.textContent = currencyFormatter.format(report.saved);
+      modalLevelGoal.textContent = `de ${currencyFormatter.format(report.goalForMonth)}`;
+      modalLevelFill.classList.toggle("over", report.pct > 100);
+      modalLevelStatus.classList.toggle("hit", !!report.hit);
+      modalLevelStatus.classList.toggle("miss", !report.hit);
+      modalLevelStatus.textContent = report.hit
+        ? "Meta batida"
+        : `Faltaram ${currencyFormatter.format(report.goalForMonth - report.saved)}`;
+    }
+    modalLevelFill.style.width = "0%";
+
+    modalInsights.innerHTML = "";
+    report.insights.forEach((text) => {
+      const p = document.createElement("p");
+      p.textContent = text;
+      modalInsights.appendChild(p);
+    });
+
+    const badgeDefs = [];
+    if (report.badges.medal) badgeDefs.push({ icon: MEDAL_ICON, label: "Medalha", color: "#d4af37" });
+    if (report.badges.gem) badgeDefs.push({ icon: GEM_ICON, label: report.badges.gem.label, color: tierColor(report.badges.gem.gem) });
+    if (report.badges.trophy)
+      badgeDefs.push({ icon: TROPHY_ICON, label: `Troféu ${report.badges.trophy.label}`, color: tierColor(report.badges.trophy.tier) });
+
+    modalBadges.innerHTML = "";
+    badgeDefs.forEach((b) => {
+      const span = document.createElement("span");
+      span.className = "modal-badge";
+      span.style.background = `color-mix(in oklab, ${b.color} 18%, transparent)`;
+      span.style.color = b.color;
+      span.innerHTML = `${b.icon} ${b.label}`;
+      modalBadges.appendChild(span);
+    });
+
+    const expenseFills = buildModalCategoryBars(modalExpenseBars, modalExpenseEmpty, report.despesaCats);
+    const incomeFills = buildModalCategoryBars(modalIncomeBars, modalIncomeEmpty, report.receitaCats);
+
+    void modalCard.offsetHeight; // força reflow antes de animar as barras
+
+    requestAnimationFrame(() => {
+      if (report.hasGoal) modalLevelFill.style.width = levelTarget + "%";
+
+      expenseFills.forEach((f, i) => {
+        setTimeout(() => {
+          f.el.style.width = f.target + "%";
+        }, i * 70);
+      });
+      incomeFills.forEach((f, i) => {
+        setTimeout(() => {
+          f.el.style.width = f.target + "%";
+        }, i * 70);
+      });
+
+      setTimeout(() => {
+        modalBadges.querySelectorAll(".modal-badge").forEach((el, i) => {
+          setTimeout(() => el.classList.add("reveal"), i * 150);
+        });
+      }, 650);
+    });
+  }
+
+  function openMonthModal(monthKey) {
+    modalMonthKeys = getAvailableMonthKeys();
+    modalCurrentIndex = modalMonthKeys.indexOf(monthKey);
+    if (modalCurrentIndex === -1) {
+      modalMonthKeys.push(monthKey);
+      modalMonthKeys.sort();
+      modalCurrentIndex = modalMonthKeys.indexOf(monthKey);
+    }
+
+    modalOverlay.hidden = false;
+    document.addEventListener("keydown", handleModalKeydown);
+    renderMonthModal();
+  }
+
+  function closeMonthModal() {
+    modalOverlay.hidden = true;
+    document.removeEventListener("keydown", handleModalKeydown);
+  }
+
+  function navigateModal(delta) {
+    const newIndex = modalCurrentIndex + delta;
+    if (newIndex < 0 || newIndex >= modalMonthKeys.length) return;
+    modalCurrentIndex = newIndex;
+    renderMonthModal();
+  }
+
+  function handleModalKeydown(e) {
+    if (e.key === "Escape") closeMonthModal();
+    else if (e.key === "ArrowLeft") navigateModal(-1);
+    else if (e.key === "ArrowRight") navigateModal(1);
+  }
+
+  function checkAutoMonthModal() {
     const prevKey = getPrevMonthKey();
     const prevTx = transactions.filter((t) => t.date.slice(0, 7) === prevKey);
     if (prevTx.length === 0) return;
@@ -852,78 +1090,13 @@
     const goalForMonth = lockGoalForMonth(prevKey);
     if (goalForMonth === null) return;
 
-    const income = sumBy(prevTx, "receita");
-    const expense = sumBy(prevTx, "despesa");
-    const saved = income - expense;
-    const hit = saved >= goalForMonth;
-    const monthLabel = capitalize(monthFormatter.format(new Date(prevKey + "-02T00:00:00Z")));
-    const pool = hit ? RECAP_SUCCESS_MESSAGES : RECAP_MISS_MESSAGES;
-    const pick = pool[Math.floor(Math.random() * pool.length)];
-
-    const parts = [pick(monthLabel, saved, goalForMonth)];
-
-    const topCategory = getTopCategoryInsight(prevTx);
-    if (topCategory) {
-      parts.push(
-        hit
-          ? `Mesmo com ${topCategory.percent}% dos gastos em ${topCategory.label}, você fechou dentro da meta.`
-          : `Categoria que mais pesou: ${topCategory.label} (${topCategory.percent}% dos gastos) — bom lugar pra cortar esse mês.`
-      );
-    }
-
-    const beforeKey = shiftMonthKey(prevKey, -1);
-    const beforeExpense = sumBy(
-      transactions.filter((t) => t.date.slice(0, 7) === beforeKey),
-      "despesa"
-    );
-    if (beforeExpense > 0) {
-      const diffPct = Math.round(((expense - beforeExpense) / beforeExpense) * 100);
-      if (diffPct <= -5) {
-        parts.push(`Você gastou ${Math.abs(diffPct)}% a menos que no mês anterior — ótimo sinal!`);
-      } else if (diffPct >= 5) {
-        parts.push(`Você gastou ${diffPct}% a mais que no mês anterior.`);
-      }
-    }
-
-    let earnedGem = null;
-    if (hit && goalForMonth > 0) {
-      const overRatio = (saved - goalForMonth) / goalForMonth;
-      earnedGem = OVERACHIEVE_TIERS.find((t) => overRatio >= t.threshold) || null;
-      if (earnedGem) {
-        const overPct = Math.round(overRatio * 100);
-        parts.push(
-          `E olha só: você superou a sua própria meta em ${overPct}% esse mês — ganhou uma pedra de ${earnedGem.label}!`
-        );
-      }
-    }
-
-    let milestone = null;
-    if (hit) {
-      const current = getStreakInfo(prevKey);
-      const prior = getStreakInfo(beforeKey);
-      const currentMilestone = getMilestone(current.months, current.savings);
-      const priorMilestone = getMilestone(prior.months, prior.savings);
-
-      if (currentMilestone && currentMilestone !== priorMilestone) {
-        milestone = currentMilestone;
-        parts.push(`Você desbloqueou o troféu ${milestone.label}: ${current.months} meses seguidos batendo a meta!`);
-      } else if (current.months > 1) {
-        parts.push(`Essa já é sua ${current.months}ª meta seguida — sequência em chamas!`);
-      }
-    }
-
-    monthBanner.classList.toggle("success", hit);
-    monthBanner.classList.toggle("miss", !hit);
-    monthBannerIcon.innerHTML = hit ? (earnedGem ? GEM_ICON : TROPHY_ICON) : TRENDING_ICON;
-    monthBannerTitle.textContent = hit ? "Meta batida!" : "Quase lá!";
-    monthBannerMessage.textContent = parts.join(" ");
-    monthBanner.hidden = false;
-
     try {
       localStorage.setItem(noticeKey, "1");
     } catch (err) {
       console.warn("Não foi possível salvar o aviso do mês:", err);
     }
+
+    openMonthModal(prevKey);
   }
 
   // ---- Helpers ----

@@ -15,6 +15,7 @@ Rastreador de despesas e receitas pessoais, com visual moderno e 5 temas à esco
 - Sequência de metas (streak) com marcos Bronze (3 meses), Prata (6) e Ouro (12) seguidos batendo a meta
 - Conquistas vitalícias (não resetam com a sequência): Medalha a cada meta batida, e pedras Esmeralda/Rubi/Diamante quando você supera a própria meta em 15%/25%/40% num mês
 - A meta usada para avaliar um mês fica travada assim que esse mês fecha — mudar a meta depois não altera a avaliação de meses antigos
+- Modal "fim de mês" animado (estilo game): abre sozinho no dia 1 do mês seguinte mostrando meta, % batida, conquistas do mês e despesas/receitas por categoria — também acessível a qualquer momento pelo botão "Histórico", navegando por qualquer mês fechado
 - Exclusão de transações
 - 5 temas de cores (Dark, Claro, Meia-noite, Floresta, Pôr do sol), salvos por dispositivo
 - Sincronização entre dispositivos com login do Google (Firebase Auth + Firestore)
