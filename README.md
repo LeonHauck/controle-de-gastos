@@ -11,7 +11,8 @@ Rastreador de despesas e receitas pessoais, com visual moderno em dark mode. Fei
 - Resumo do período: receitas, despesas, saldo e número de transações
 - Gráfico de despesas por categoria
 - Exclusão de transações
-- Dados salvos localmente no navegador (`localStorage`)
+- Sincronização entre dispositivos com login do Google (Firebase Auth + Firestore)
+- Funciona offline com `localStorage` quando não está logado
 
 ## 🚀 Como usar
 
@@ -29,9 +30,9 @@ js/app.js       # lógica da aplicação (estado, persistência, renderização)
 
 Publicado via [GitHub Pages](https://pages.github.com/), a partir da branch `master`.
 
-## ⚠️ Dados
+## ☁️ Sincronização
 
-Os dados ficam salvos apenas no navegador de cada dispositivo (não há backend/sincronização entre dispositivos nesta versão).
+Clique em **"Sincronizar"** no topo do app e entre com sua conta Google para ter os dados disponíveis em qualquer dispositivo (PC, celular etc.), em tempo real, via [Firebase](https://firebase.google.com/) (Auth + Firestore). Sem login, os dados ficam salvos apenas no navegador atual (`localStorage`).
 
 ---
 
