@@ -511,21 +511,6 @@ input:focus {
   color: #eab308;
 }
 
-.streak-badge.tier-emerald {
-  background: color-mix(in oklab, #10b981 20%, transparent);
-  color: #10b981;
-}
-
-.streak-badge.tier-ruby {
-  background: color-mix(in oklab, #e11d48 18%, transparent);
-  color: #e11d48;
-}
-
-.streak-badge.tier-diamond {
-  background: color-mix(in oklab, #22d3ee 22%, transparent);
-  color: #22d3ee;
-}
-
 .streak-icon {
   display: flex;
   align-items: center;
@@ -610,6 +595,56 @@ input:focus {
   font-size: 0.78rem;
   color: var(--text-muted);
   line-height: 1.4;
+}
+
+.achievements-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--gridline);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.achievements-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.achv-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.achv-pill b {
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+.achv-medal {
+  background: color-mix(in oklab, #d4af37 18%, transparent);
+  color: #d4af37;
+}
+
+.achv-emerald {
+  background: color-mix(in oklab, #10b981 20%, transparent);
+  color: #10b981;
+}
+
+.achv-ruby {
+  background: color-mix(in oklab, #e11d48 18%, transparent);
+  color: #e11d48;
+}
+
+.achv-diamond {
+  background: color-mix(in oklab, #22d3ee 22%, transparent);
+  color: #22d3ee;
 }
 
 .meter-track {

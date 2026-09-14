@@ -4,6 +4,7 @@
   const STORAGE_KEY = "expense-tracker-transactions";
   const STORAGE_KEY_GOAL = "expense-tracker-goal";
   const STORAGE_KEY_GOAL_HISTORY = "expense-tracker-goal-history";
+  const STORAGE_KEY_ACHIEVEMENTS = "expense-tracker-achievements";
   const STORAGE_KEY_THEME = "expense-tracker-theme";
 
   const CATEGORIES = {
@@ -55,15 +56,21 @@
   const GEM_ICON =
     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M6 3h12l4 6-10 12L2 9l4-6Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M2 9h20M9 3l-2 6 5 12 5-12-2-6" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>';
 
-  const GEM_TIERS = ["emerald", "ruby", "diamond"];
+  const MEDAL_ICON =
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 2 6 9m9-7 3 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="m6 9 2.5 5M18 9l-2.5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="15" r="7" stroke="currentColor" stroke-width="1.6"/><path d="m12 11.3 1.1 2.2 2.5.35-1.8 1.75.4 2.4-2.2-1.15-2.2 1.15.4-2.4-1.8-1.75 2.5-.35 1.1-2.2Z" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/></svg>';
 
-  // Cada marco destrava por tempo de sequência (months) OU por valor acumulado
-  // guardado nela (amount) — o que vier primeiro. Isso premia quem tem uma meta
-  // alta sem exigir que espere o mesmo número de meses de quem tem meta baixa.
+  // Marcos de superação: quanto acima da própria meta o usuário fechou o mês.
+  const OVERACHIEVE_TIERS = [
+    { threshold: 0.4, gem: "diamond", label: "Diamante" },
+    { threshold: 0.25, gem: "ruby", label: "Rubi" },
+    { threshold: 0.15, gem: "emerald", label: "Esmeralda" },
+  ];
+
+  // O troféu da sequência atual é só sobre consistência (tempo seguido).
+  // As pedras (esmeralda/rubi/diamante) não entram aqui — elas são
+  // conquistas vitalícias por superar a própria meta num mês (ver
+  // OVERACHIEVE_TIERS e updateAchievements).
   const STREAK_MILESTONES = [
-    { months: 36, amount: 50000, label: "Diamante", tier: "diamond" },
-    { months: 24, amount: 25000, label: "Rubi", tier: "ruby" },
-    { months: 18, amount: 10000, label: "Esmeralda", tier: "emerald" },
     { months: 12, label: "Ouro", tier: "gold" },
     { months: 6, label: "Prata", tier: "silver" },
     { months: 3, label: "Bronze", tier: "bronze" },
@@ -96,6 +103,7 @@
   let unsubscribeCloud = null;
   let monthlyGoal = loadGoalLocal();
   let goalHistory = loadGoalHistoryLocal();
+  let achievements = loadAchievementsLocal();
 
   // ---- DOM refs ----
 
@@ -143,6 +151,12 @@
   const streakBadge = document.getElementById("streak-badge");
   const streakIcon = document.getElementById("streak-icon");
   const streakText = document.getElementById("streak-text");
+
+  const achievementsSection = document.getElementById("achievements-section");
+  const achvMedal = document.getElementById("achv-medal");
+  const achvEmerald = document.getElementById("achv-emerald");
+  const achvRuby = document.getElementById("achv-ruby");
+  const achvDiamond = document.getElementById("achv-diamond");
 
   // ---- Init ----
 
@@ -292,6 +306,10 @@
     return db.collection("users").doc(uid).collection("settings").doc("goal");
   }
 
+  function achievementsDoc(uid) {
+    return db.collection("users").doc(uid).collection("settings").doc("achievements");
+  }
+
   function subscribeCloud(uid) {
     unsubscribeCloud = userCollection(uid).onSnapshot(
       (snapshot) => {
@@ -343,6 +361,17 @@
         console.warn("Erro ao carregar meta da nuvem:", err);
       }
 
+      try {
+        const achvSnap = await achievementsDoc(user.uid).get();
+        if (achvSnap.exists) {
+          achievements = normalizeAchievements(achvSnap.data());
+        } else if (hasAnyAchievement(achievements)) {
+          await achievementsDoc(user.uid).set(achievements);
+        }
+      } catch (err) {
+        console.warn("Erro ao carregar conquistas da nuvem:", err);
+      }
+
       subscribeCloud(user.uid);
     } else {
       cloudUser = null;
@@ -352,6 +381,7 @@
       transactions = loadTransactions();
       monthlyGoal = loadGoalLocal();
       goalHistory = loadGoalHistoryLocal();
+      achievements = loadAchievementsLocal();
       render();
     }
   });
@@ -366,6 +396,8 @@
     renderTable(filtered);
     renderGoals();
     renderStreakBadge();
+    updateAchievements();
+    renderAchievements();
     checkMonthlyRecap();
   }
 
@@ -603,6 +635,106 @@
     }
   }
 
+  function normalizeAchievements(data) {
+    data = data || {};
+    const gems = data.gems || {};
+    return {
+      medals: data.medals || 0,
+      gems: {
+        emerald: gems.emerald || 0,
+        ruby: gems.ruby || 0,
+        diamond: gems.diamond || 0,
+      },
+      lastCountedMonth: data.lastCountedMonth || null,
+    };
+  }
+
+  function hasAnyAchievement(a) {
+    return a.medals > 0 || a.gems.emerald > 0 || a.gems.ruby > 0 || a.gems.diamond > 0;
+  }
+
+  function loadAchievementsLocal() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY_ACHIEVEMENTS);
+      return normalizeAchievements(raw ? JSON.parse(raw) : null);
+    } catch (err) {
+      console.warn("Não foi possível carregar as conquistas:", err);
+      return normalizeAchievements(null);
+    }
+  }
+
+  function saveAchievementsLocal(data) {
+    try {
+      localStorage.setItem(STORAGE_KEY_ACHIEVEMENTS, JSON.stringify(data));
+    } catch (err) {
+      console.warn("Não foi possível salvar as conquistas:", err);
+    }
+  }
+
+  function persistAchievements() {
+    if (cloudUser) {
+      achievementsDoc(cloudUser.uid)
+        .set(achievements)
+        .catch((err) => console.warn("Erro ao salvar conquistas na nuvem:", err));
+    } else {
+      saveAchievementsLocal(achievements);
+    }
+  }
+
+  // Percorre os meses fechados ainda não contabilizados (desde a última
+  // contagem) e soma +1 medalha para cada meta batida, além da pedra de
+  // superação correspondente (se aplicável). Contadores vitalícios: não
+  // resetam quando a sequência atual quebra.
+  function updateAchievements() {
+    const balances = getMonthlyBalances();
+    const prevKey = getPrevMonthKey();
+    const lastCounted = achievements.lastCountedMonth;
+
+    const pending = Object.keys(balances)
+      .filter((key) => key <= prevKey && (!lastCounted || key > lastCounted))
+      .sort();
+
+    if (pending.length === 0) return;
+
+    pending.forEach((key) => {
+      const goalForMonth = lockGoalForMonth(key);
+      if (goalForMonth === null) return;
+
+      const balance = balances[key].income - balances[key].expense;
+      if (balance < goalForMonth) return;
+
+      achievements.medals++;
+
+      const overRatio = (balance - goalForMonth) / goalForMonth;
+      const tier = OVERACHIEVE_TIERS.find((t) => overRatio >= t.threshold);
+      if (tier) achievements.gems[tier.gem]++;
+    });
+
+    achievements.lastCountedMonth = pending[pending.length - 1];
+    persistAchievements();
+  }
+
+  function renderAchievements() {
+    const { medals, gems } = achievements;
+    const any = hasAnyAchievement(achievements);
+    achievementsSection.hidden = !any;
+    if (!any) return;
+
+    setAchvPill(achvMedal, medals, MEDAL_ICON, "Medalha");
+    setAchvPill(achvEmerald, gems.emerald, GEM_ICON, "Esmeralda");
+    setAchvPill(achvRuby, gems.ruby, GEM_ICON, "Rubi");
+    setAchvPill(achvDiamond, gems.diamond, GEM_ICON, "Diamante");
+  }
+
+  function setAchvPill(el, count, icon, label) {
+    if (count <= 0) {
+      el.hidden = true;
+      return;
+    }
+    el.hidden = false;
+    el.innerHTML = `${icon} ${label} <b>×${count}</b>`;
+  }
+
   // A meta usada para avaliar um mês fica travada na primeira vez que esse mês
   // é avaliado (quando ele já fechou). Mudar a meta atual não altera meses
   // antigos já travados.
@@ -675,11 +807,11 @@
 
     const milestone = getMilestone(months, savings);
     streakBadge.hidden = false;
-    streakBadge.classList.remove("tier-bronze", "tier-silver", "tier-gold", "tier-emerald", "tier-ruby", "tier-diamond");
+    streakBadge.classList.remove("tier-bronze", "tier-silver", "tier-gold");
 
     if (milestone) {
       streakBadge.classList.add("tier-" + milestone.tier);
-      streakIcon.innerHTML = GEM_TIERS.includes(milestone.tier) ? GEM_ICON : TROPHY_ICON;
+      streakIcon.innerHTML = TROPHY_ICON;
       streakText.textContent = `${months} meses · ${milestone.label}`;
     } else {
       streakIcon.innerHTML = FLAME_ICON;
@@ -753,9 +885,16 @@
       }
     }
 
-    if (hit && saved >= goalForMonth * 1.25) {
-      const overPct = Math.round(((saved - goalForMonth) / goalForMonth) * 100);
-      parts.push(`E olha só: você superou a sua própria meta em ${overPct}% esse mês — impressionante!`);
+    let earnedGem = null;
+    if (hit && goalForMonth > 0) {
+      const overRatio = (saved - goalForMonth) / goalForMonth;
+      earnedGem = OVERACHIEVE_TIERS.find((t) => overRatio >= t.threshold) || null;
+      if (earnedGem) {
+        const overPct = Math.round(overRatio * 100);
+        parts.push(
+          `E olha só: você superou a sua própria meta em ${overPct}% esse mês — ganhou uma pedra de ${earnedGem.label}!`
+        );
+      }
     }
 
     let milestone = null;
@@ -767,9 +906,7 @@
 
       if (currentMilestone && currentMilestone !== priorMilestone) {
         milestone = currentMilestone;
-        parts.push(
-          `Você desbloqueou o marco ${milestone.label}: ${current.months} meses seguidos e ${currencyFormatter.format(current.savings)} guardados na sequência!`
-        );
+        parts.push(`Você desbloqueou o troféu ${milestone.label}: ${current.months} meses seguidos batendo a meta!`);
       } else if (current.months > 1) {
         parts.push(`Essa já é sua ${current.months}ª meta seguida — sequência em chamas!`);
       }
@@ -777,7 +914,7 @@
 
     monthBanner.classList.toggle("success", hit);
     monthBanner.classList.toggle("miss", !hit);
-    monthBannerIcon.innerHTML = hit ? (milestone && GEM_TIERS.includes(milestone.tier) ? GEM_ICON : TROPHY_ICON) : TRENDING_ICON;
+    monthBannerIcon.innerHTML = hit ? (earnedGem ? GEM_ICON : TROPHY_ICON) : TRENDING_ICON;
     monthBannerTitle.textContent = hit ? "Meta batida!" : "Quase lá!";
     monthBannerMessage.textContent = parts.join(" ");
     monthBanner.hidden = false;

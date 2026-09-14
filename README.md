@@ -12,7 +12,8 @@ Rastreador de despesas e receitas pessoais, com visual moderno e 5 temas à esco
 - Gráfico de despesas por categoria, com percentual sobre o total
 - Painel de metas e previsão: meta de economia mensal, previsão de gastos do próximo mês (média dos últimos meses fechados) e receita necessária para cobrir gastos + bater a meta
 - Recap do mês fechado: aviso descontraído com a categoria que mais pesou, comparação com o mês anterior, dica de melhoria e aviso quando você supera bastante a própria meta
-- Sequência de metas (streak) com marcos Bronze (3 meses), Prata (6), Ouro (12), Esmeralda, Rubi e Diamante (por tempo ou por valor acumulado guardado na sequência)
+- Sequência de metas (streak) com marcos Bronze (3 meses), Prata (6) e Ouro (12) seguidos batendo a meta
+- Conquistas vitalícias (não resetam com a sequência): Medalha a cada meta batida, e pedras Esmeralda/Rubi/Diamante quando você supera a própria meta em 15%/25%/40% num mês
 - A meta usada para avaliar um mês fica travada assim que esse mês fecha — mudar a meta depois não altera a avaliação de meses antigos
 - Exclusão de transações
 - 5 temas de cores (Dark, Claro, Meia-noite, Floresta, Pôr do sol), salvos por dispositivo
