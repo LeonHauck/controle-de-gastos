@@ -76,11 +76,14 @@
 
   // ---- Events ----
 
+  const typeSlider = document.querySelector(".type-slider");
+
   typeButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
       currentType = btn.dataset.type;
       typeInput.value = currentType;
       typeButtons.forEach((b) => b.classList.toggle("active", b === btn));
+      typeSlider.classList.toggle("slider-receita", currentType === "receita");
       populateCategorySelect();
     });
   });
@@ -171,7 +174,7 @@
     statIncome.textContent = currencyFormatter.format(income);
     statExpense.textContent = currencyFormatter.format(expense);
     statBalance.textContent = currencyFormatter.format(income - expense);
-    statBalance.className = "stat-value " + (income - expense >= 0 ? "stat-good" : "stat-critical");
+    statBalance.classList.toggle("balance-negative", income - expense < 0);
     statCount.textContent = String(list.length);
   }
 
@@ -234,7 +237,7 @@
       tr.innerHTML = `
         <td>${dateFormatter.format(new Date(t.date + "T00:00:00Z"))}</td>
         <td>${escapeHtml(t.description || "(sem descrição)")}</td>
-        <td><span class="cat-badge"><span class="cat-dot" style="background:${meta.color};"></span>${escapeHtml(meta.label)}</span></td>
+        <td><span class="cat-badge"><span class="cat-dot" style="background:${meta.color}; color:${meta.color};"></span>${escapeHtml(meta.label)}</span></td>
         <td class="amount-cell ${amountClass}">${sign} ${currencyFormatter.format(t.amount)}</td>
         <td class="col-actions">
           <button class="delete-btn" data-id="${t.id}" aria-label="Excluir transação">

@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Controle de Gastos</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
@@ -23,21 +27,24 @@
       </div>
     </header>
 
-    <section class="stat-row" aria-label="Resumo do período">
-      <div class="stat-tile">
-        <span class="stat-label">Receitas</span>
-        <span class="stat-value stat-good" id="stat-income">R$ 0,00</span>
+    <section class="hero-grid" aria-label="Resumo do período">
+      <div class="hero-balance">
+        <div class="hero-balance-glow" aria-hidden="true"></div>
+        <span class="hero-label">Saldo do período</span>
+        <span class="hero-value" id="stat-balance">R$ 0,00</span>
+        <div class="hero-chips">
+          <span class="chip chip-good">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span id="stat-income">R$ 0,00</span>
+          </span>
+          <span class="chip chip-critical">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span id="stat-expense">R$ 0,00</span>
+          </span>
+        </div>
       </div>
-      <div class="stat-tile">
-        <span class="stat-label">Despesas</span>
-        <span class="stat-value stat-critical" id="stat-expense">R$ 0,00</span>
-      </div>
-      <div class="stat-tile">
-        <span class="stat-label">Saldo</span>
-        <span class="stat-value" id="stat-balance">R$ 0,00</span>
-      </div>
-      <div class="stat-tile">
-        <span class="stat-label">Transações</span>
+      <div class="hero-count">
+        <span class="stat-label">Transações no período</span>
         <span class="stat-value" id="stat-count">0</span>
       </div>
     </section>
@@ -47,6 +54,7 @@
         <h2>Nova transação</h2>
         <form id="transaction-form">
           <div class="type-toggle" role="radiogroup" aria-label="Tipo de transação">
+            <span class="type-slider" aria-hidden="true"></span>
             <button type="button" class="type-btn active" data-type="despesa">Despesa</button>
             <button type="button" class="type-btn" data-type="receita">Receita</button>
           </div>
@@ -104,6 +112,8 @@
         <p class="empty-state" id="table-empty">Nenhuma transação ainda. Adicione a primeira ao lado.</p>
       </div>
     </section>
+
+    <footer class="app-footer">Desenvolvido por Leon Hauck</footer>
   </div>
 
   <script src="js/app.js" defer></script>
