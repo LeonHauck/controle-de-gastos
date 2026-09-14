@@ -2,6 +2,7 @@
   "use strict";
 
   const STORAGE_KEY = "expense-tracker-transactions";
+  const STORAGE_KEY_GOAL = "expense-tracker-goal";
 
   const CATEGORIES = {
     despesa: [
@@ -47,6 +48,7 @@
   let selectedPeriod = "all";
   let cloudUser = null;
   let unsubscribeCloud = null;
+  let monthlyGoal = loadGoalLocal();
 
   // ---- DOM refs ----
 
@@ -73,6 +75,15 @@
   const syncBtn = document.getElementById("sync-btn");
   const syncLabel = document.getElementById("sync-label");
   const syncStatus = document.getElementById("sync-status");
+
+  const goalInput = document.getElementById("goal-input");
+  const goalProgressValue = document.getElementById("goal-progress-value");
+  const goalProgressFill = document.getElementById("goal-progress-fill");
+  const goalProgressNote = document.getElementById("goal-progress-note");
+  const forecastValue = document.getElementById("forecast-value");
+  const forecastNote = document.getElementById("forecast-note");
+  const requiredIncomeValue = document.getElementById("required-income-value");
+  const requiredIncomeNote = document.getElementById("required-income-note");
 
   // ---- Init ----
 
@@ -151,6 +162,21 @@
     render();
   });
 
+  goalInput.addEventListener("change", () => {
+    const amount = Math.max(0, parseFloat(goalInput.value) || 0);
+    monthlyGoal = amount;
+
+    if (cloudUser) {
+      goalDoc(cloudUser.uid)
+        .set({ amount }, { merge: true })
+        .catch((err) => console.warn("Erro ao salvar meta na nuvem:", err));
+    } else {
+      saveGoalLocal(amount);
+    }
+
+    renderGoals();
+  });
+
   syncBtn.addEventListener("click", () => {
     if (cloudUser) {
       auth.signOut();
@@ -173,6 +199,10 @@
 
   function userCollection(uid) {
     return db.collection("users").doc(uid).collection("transactions");
+  }
+
+  function goalDoc(uid) {
+    return db.collection("users").doc(uid).collection("settings").doc("goal");
   }
 
   function subscribeCloud(uid) {
@@ -213,6 +243,17 @@
         console.warn("Erro ao migrar dados locais para a nuvem:", err);
       }
 
+      try {
+        const goalSnap = await goalDoc(user.uid).get();
+        if (goalSnap.exists) {
+          monthlyGoal = goalSnap.data().amount || 0;
+        } else if (monthlyGoal > 0) {
+          await goalDoc(user.uid).set({ amount: monthlyGoal });
+        }
+      } catch (err) {
+        console.warn("Erro ao carregar meta da nuvem:", err);
+      }
+
       subscribeCloud(user.uid);
     } else {
       cloudUser = null;
@@ -220,6 +261,7 @@
       syncLabel.textContent = "Sincronizar";
       syncStatus.hidden = true;
       transactions = loadTransactions();
+      monthlyGoal = loadGoalLocal();
       render();
     }
   });
@@ -232,6 +274,7 @@
     renderStats(filtered);
     renderChart(filtered);
     renderTable(filtered);
+    renderGoals();
   }
 
   function renderPeriodOptions() {
@@ -298,10 +341,12 @@
     });
 
     const maxValue = Math.max(...Object.values(totals));
+    const totalDespesas = Object.values(totals).reduce((acc, v) => acc + v, 0);
     const rows = Object.entries(totals)
       .sort((a, b) => b[1] - a[1])
       .map(([categoryId, value]) => {
         const meta = findCategory(categoryId) || { label: categoryId, color: "var(--cat-8)" };
+        const percent = totalDespesas > 0 ? Math.round((value / totalDespesas) * 100) : 0;
         const row = document.createElement("div");
         row.className = "chart-row";
         row.innerHTML = `
@@ -309,7 +354,7 @@
           <span class="chart-track">
             <span class="chart-fill" style="width:${(value / maxValue) * 100}%; background:${meta.color};"></span>
           </span>
-          <span class="cat-value">${currencyFormatter.format(value)}</span>
+          <span class="cat-value">${currencyFormatter.format(value)} <span class="cat-percent">· ${percent}%</span></span>
         `;
         return row;
       });
@@ -347,6 +392,95 @@
       `;
       tbody.appendChild(tr);
     });
+  }
+
+  // ---- Metas & previsão ----
+
+  function computeMonthlyExpenseTotals() {
+    const totals = {};
+    transactions
+      .filter((t) => t.type === "despesa")
+      .forEach((t) => {
+        const key = t.date.slice(0, 7);
+        totals[key] = (totals[key] || 0) + t.amount;
+      });
+    return totals;
+  }
+
+  function getForecastExpense() {
+    const totals = computeMonthlyExpenseTotals();
+    const currentKey = toISODate(new Date()).slice(0, 7);
+    const completedMonths = Object.keys(totals)
+      .filter((key) => key < currentKey)
+      .sort()
+      .reverse()
+      .slice(0, 3);
+
+    if (completedMonths.length === 0) return null;
+
+    const sum = completedMonths.reduce((acc, key) => acc + totals[key], 0);
+    return { value: sum / completedMonths.length, monthsUsed: completedMonths.length };
+  }
+
+  function getCurrentMonthBalance() {
+    const currentKey = toISODate(new Date()).slice(0, 7);
+    const monthTx = transactions.filter((t) => t.date.slice(0, 7) === currentKey);
+    return sumBy(monthTx, "receita") - sumBy(monthTx, "despesa");
+  }
+
+  function renderGoals() {
+    goalInput.value = monthlyGoal > 0 ? monthlyGoal.toFixed(2) : "";
+
+    const balance = getCurrentMonthBalance();
+    const pct = monthlyGoal > 0 ? Math.max(0, Math.min(100, (balance / monthlyGoal) * 100)) : 0;
+
+    goalProgressValue.innerHTML = `${currencyFormatter.format(balance)} <span class="goal-card-sub">de ${currencyFormatter.format(monthlyGoal)}</span>`;
+    goalProgressFill.style.width = pct + "%";
+
+    if (monthlyGoal <= 0) {
+      goalProgressNote.textContent = "Defina uma meta acima para acompanhar seu progresso.";
+    } else if (balance >= monthlyGoal) {
+      goalProgressNote.textContent = "Meta batida neste mês.";
+    } else {
+      goalProgressNote.textContent = `Faltam ${currencyFormatter.format(monthlyGoal - balance)} para bater a meta.`;
+    }
+
+    const forecast = getForecastExpense();
+    if (!forecast) {
+      forecastValue.textContent = "—";
+      forecastNote.textContent = "Sem dados suficientes ainda (precisa de pelo menos 1 mês fechado).";
+      requiredIncomeValue.textContent = "—";
+      requiredIncomeNote.textContent = "";
+      return;
+    }
+
+    forecastValue.textContent = currencyFormatter.format(forecast.value);
+    forecastNote.textContent = `Média dos últimos ${forecast.monthsUsed} ${forecast.monthsUsed === 1 ? "mês fechado" : "meses fechados"}.`;
+
+    const requiredIncome = forecast.value + Math.max(monthlyGoal, 0);
+    requiredIncomeValue.textContent = currencyFormatter.format(requiredIncome);
+    requiredIncomeNote.textContent =
+      monthlyGoal > 0
+        ? `Para cobrir a previsão de gastos e economizar ${currencyFormatter.format(monthlyGoal)}.`
+        : "Para cobrir a previsão de gastos (defina uma meta para incluir economia).";
+  }
+
+  function loadGoalLocal() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY_GOAL);
+      return raw ? parseFloat(raw) || 0 : 0;
+    } catch (err) {
+      console.warn("Não foi possível carregar a meta salva:", err);
+      return 0;
+    }
+  }
+
+  function saveGoalLocal(amount) {
+    try {
+      localStorage.setItem(STORAGE_KEY_GOAL, String(amount));
+    } catch (err) {
+      console.warn("Não foi possível salvar a meta:", err);
+    }
   }
 
   // ---- Helpers ----

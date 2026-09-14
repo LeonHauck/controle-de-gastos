@@ -285,6 +285,119 @@ input:focus {
   color: var(--text-primary);
 }
 
+/* Goals panel */
+.goals-panel {
+  margin-bottom: 14px;
+}
+
+.goals-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.goals-header h2 {
+  margin: 0;
+}
+
+.goal-input-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.goal-input-field label {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.goal-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0 12px;
+  min-width: 200px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.goal-input-wrap:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(109, 140, 255, 0.2);
+}
+
+.goal-input-prefix {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.goal-input-wrap input {
+  border: none;
+  background: transparent;
+  padding: 10px 0;
+}
+
+.goal-input-wrap input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.goals-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.goal-card {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.goal-card-value {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.goal-card-sub {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.goal-card-note {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.meter-track {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(34, 197, 94, 0.15);
+  overflow: hidden;
+}
+
+.meter-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--good);
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 /* Main grid */
 .main-grid {
   display: grid;
@@ -468,6 +581,11 @@ input:focus {
   font-variant-numeric: tabular-nums;
 }
 
+.cat-percent {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
 /* Table */
 .table-panel {
   padding: 22px 0 8px;
@@ -620,6 +738,19 @@ tbody tr:last-child td {
 
   .panel {
     padding: 18px;
+  }
+
+  .goals-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .goal-input-wrap {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .goal-input-field {
+    width: 100%;
   }
 
   .field-row {
