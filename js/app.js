@@ -48,6 +48,15 @@
   const TRENDING_ICON =
     '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M3 17l6-6 4 4 8-8M21 7h-5v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
+  const FLAME_ICON =
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 22c4.4 0 7-2.7 7-6.5 0-3-2-5-3-7-.3 2-1.5 3-2.5 2 1-2.5-1-4.5-2.5-6.5-.5 3-3 5-4.5 7.5C5.3 13.5 5 14.7 5 15.5 5 19.3 7.6 22 12 22Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+
+  const STREAK_MILESTONES = [
+    { months: 12, label: "Ouro", tier: "gold" },
+    { months: 6, label: "Prata", tier: "silver" },
+    { months: 3, label: "Bronze", tier: "bronze" },
+  ];
+
   const RECAP_SUCCESS_MESSAGES = [
     (month, saved, goal) =>
       `Mandou bem em ${month}! Você economizou ${currencyFormatter.format(saved)}, passando da meta de ${currencyFormatter.format(goal)}. Bora manter o ritmo!`,
@@ -117,6 +126,10 @@
   const forecastNote = document.getElementById("forecast-note");
   const requiredIncomeValue = document.getElementById("required-income-value");
   const requiredIncomeNote = document.getElementById("required-income-note");
+
+  const streakBadge = document.getElementById("streak-badge");
+  const streakIcon = document.getElementById("streak-icon");
+  const streakText = document.getElementById("streak-text");
 
   // ---- Init ----
 
@@ -336,6 +349,7 @@
     renderChart(filtered);
     renderTable(filtered);
     renderGoals();
+    renderStreakBadge();
     checkMonthlyRecap();
   }
 
@@ -545,13 +559,82 @@
     }
   }
 
-  // ---- Recap mensal ----
+  // ---- Recap mensal & sequência ----
+
+  function shiftMonthKey(key, delta) {
+    const [y, m] = key.split("-").map(Number);
+    const d = new Date(Date.UTC(y, m - 1 + delta, 1));
+    return d.toISOString().slice(0, 7);
+  }
 
   function getPrevMonthKey() {
-    const currentKey = toISODate(new Date()).slice(0, 7);
-    const [y, m] = currentKey.split("-").map(Number);
-    const prevDate = new Date(Date.UTC(y, m - 2, 1));
-    return prevDate.toISOString().slice(0, 7);
+    return shiftMonthKey(toISODate(new Date()).slice(0, 7), -1);
+  }
+
+  function getMonthlyBalances() {
+    const map = {};
+    transactions.forEach((t) => {
+      const key = t.date.slice(0, 7);
+      if (!map[key]) map[key] = { income: 0, expense: 0 };
+      if (t.type === "receita") map[key].income += t.amount;
+      else map[key].expense += t.amount;
+    });
+    return map;
+  }
+
+  function getStreak() {
+    if (monthlyGoal <= 0) return 0;
+
+    const balances = getMonthlyBalances();
+    let cursor = getPrevMonthKey();
+    let streak = 0;
+
+    while (balances[cursor] && balances[cursor].income - balances[cursor].expense >= monthlyGoal) {
+      streak++;
+      cursor = shiftMonthKey(cursor, -1);
+    }
+
+    return streak;
+  }
+
+  function getMilestone(streak) {
+    return STREAK_MILESTONES.find((m) => streak >= m.months) || null;
+  }
+
+  function renderStreakBadge() {
+    const streak = getStreak();
+    if (streak <= 0) {
+      streakBadge.hidden = true;
+      return;
+    }
+
+    const milestone = getMilestone(streak);
+    streakBadge.hidden = false;
+    streakBadge.classList.remove("tier-bronze", "tier-silver", "tier-gold");
+    streakIcon.innerHTML = milestone ? TROPHY_ICON : FLAME_ICON;
+
+    if (milestone) {
+      streakBadge.classList.add("tier-" + milestone.tier);
+      streakText.textContent = `${streak} meses · ${milestone.label}`;
+    } else {
+      streakText.textContent = `${streak} ${streak === 1 ? "mês seguido" : "meses seguidos"}`;
+    }
+  }
+
+  function getTopCategoryInsight(monthTx) {
+    const despesas = monthTx.filter((t) => t.type === "despesa");
+    if (despesas.length === 0) return null;
+
+    const totals = {};
+    despesas.forEach((t) => {
+      totals[t.category] = (totals[t.category] || 0) + t.amount;
+    });
+    const totalDespesa = Object.values(totals).reduce((a, b) => a + b, 0);
+    const [topCatId, topVal] = Object.entries(totals).sort((a, b) => b[1] - a[1])[0];
+    const meta = findCategory(topCatId);
+    const percent = totalDespesa > 0 ? Math.round((topVal / totalDespesa) * 100) : 0;
+
+    return { label: meta ? meta.label : topCatId, percent };
   }
 
   function checkMonthlyRecap() {
@@ -570,17 +653,52 @@
     }
     if (alreadyShown) return;
 
-    const saved = sumBy(prevTx, "receita") - sumBy(prevTx, "despesa");
+    const income = sumBy(prevTx, "receita");
+    const expense = sumBy(prevTx, "despesa");
+    const saved = income - expense;
     const hit = saved >= monthlyGoal;
     const monthLabel = capitalize(monthFormatter.format(new Date(prevKey + "-02T00:00:00Z")));
     const pool = hit ? RECAP_SUCCESS_MESSAGES : RECAP_MISS_MESSAGES;
     const pick = pool[Math.floor(Math.random() * pool.length)];
 
+    const parts = [pick(monthLabel, saved, monthlyGoal)];
+
+    const topCategory = getTopCategoryInsight(prevTx);
+    if (topCategory) {
+      parts.push(
+        hit
+          ? `Mesmo com ${topCategory.percent}% dos gastos em ${topCategory.label}, você fechou dentro da meta.`
+          : `Categoria que mais pesou: ${topCategory.label} (${topCategory.percent}% dos gastos) — bom lugar pra cortar esse mês.`
+      );
+    }
+
+    const beforeKey = shiftMonthKey(prevKey, -1);
+    const beforeExpense = sumBy(
+      transactions.filter((t) => t.date.slice(0, 7) === beforeKey),
+      "despesa"
+    );
+    if (beforeExpense > 0) {
+      const diffPct = Math.round(((expense - beforeExpense) / beforeExpense) * 100);
+      if (diffPct <= -5) {
+        parts.push(`Você gastou ${Math.abs(diffPct)}% a menos que no mês anterior — ótimo sinal!`);
+      } else if (diffPct >= 5) {
+        parts.push(`Você gastou ${diffPct}% a mais que no mês anterior.`);
+      }
+    }
+
+    const streak = getStreak();
+    const milestone = hit ? getMilestone(streak) : null;
+    if (milestone && streak === milestone.months) {
+      parts.push(`Você desbloqueou o troféu ${milestone.label}: ${streak} meses seguidos batendo a meta!`);
+    } else if (hit && streak > 1) {
+      parts.push(`Essa já é sua ${streak}ª meta seguida — sequência em chamas!`);
+    }
+
     monthBanner.classList.toggle("success", hit);
     monthBanner.classList.toggle("miss", !hit);
     monthBannerIcon.innerHTML = hit ? TROPHY_ICON : TRENDING_ICON;
     monthBannerTitle.textContent = hit ? "Meta batida!" : "Quase lá!";
-    monthBannerMessage.textContent = pick(monthLabel, saved, monthlyGoal);
+    monthBannerMessage.textContent = parts.join(" ");
     monthBanner.hidden = false;
 
     try {
