@@ -22,6 +22,8 @@
   --cat-7: #a685f2;
   --cat-8: #f0665f;
 
+  --streak-color: #a78bfa;
+
   --radius-sm: 10px;
   --radius-md: 14px;
   --radius-lg: 22px;
@@ -38,6 +40,7 @@
   --gridline: #23263d;
   --accent: #7c5cff;
   --accent-2: #4f9dff;
+  --streak-color: #fbbf24;
 }
 
 /* Floresta: dark emerald/lime skin */
@@ -48,6 +51,7 @@
   --gridline: #223a29;
   --accent: #34d399;
   --accent-2: #a3e635;
+  --streak-color: #f59e0b;
 }
 
 /* Pôr do sol: dark coral/orange skin */
@@ -58,6 +62,7 @@
   --gridline: #3a2521;
   --accent: #ff8a4c;
   --accent-2: #ff5c8a;
+  --streak-color: #fde047;
 }
 
 /* Claro: light skin (own categorical steps for surface contrast) */
@@ -84,6 +89,7 @@
   --cat-6: #008300;
   --cat-7: #4a3aa7;
   --cat-8: #e34948;
+  --streak-color: #ea580c;
 }
 
 * {
@@ -486,8 +492,8 @@ input:focus {
   border-radius: 999px;
   font-size: 0.78rem;
   font-weight: 600;
-  background: color-mix(in oklab, #ff8a4c 16%, transparent);
-  color: #ff8a4c;
+  background: color-mix(in oklab, var(--streak-color) 16%, transparent);
+  color: var(--streak-color);
 }
 
 .streak-badge.tier-bronze {
@@ -503,6 +509,21 @@ input:focus {
 .streak-badge.tier-gold {
   background: color-mix(in oklab, #eab308 20%, transparent);
   color: #eab308;
+}
+
+.streak-badge.tier-emerald {
+  background: color-mix(in oklab, #10b981 20%, transparent);
+  color: #10b981;
+}
+
+.streak-badge.tier-ruby {
+  background: color-mix(in oklab, #e11d48 18%, transparent);
+  color: #e11d48;
+}
+
+.streak-badge.tier-diamond {
+  background: color-mix(in oklab, #22d3ee 22%, transparent);
+  color: #22d3ee;
 }
 
 .streak-icon {

@@ -3,6 +3,7 @@
 
   const STORAGE_KEY = "expense-tracker-transactions";
   const STORAGE_KEY_GOAL = "expense-tracker-goal";
+  const STORAGE_KEY_GOAL_HISTORY = "expense-tracker-goal-history";
   const STORAGE_KEY_THEME = "expense-tracker-theme";
 
   const CATEGORIES = {
@@ -51,7 +52,18 @@
   const FLAME_ICON =
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 22c4.4 0 7-2.7 7-6.5 0-3-2-5-3-7-.3 2-1.5 3-2.5 2 1-2.5-1-4.5-2.5-6.5-.5 3-3 5-4.5 7.5C5.3 13.5 5 14.7 5 15.5 5 19.3 7.6 22 12 22Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>';
 
+  const GEM_ICON =
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M6 3h12l4 6-10 12L2 9l4-6Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M2 9h20M9 3l-2 6 5 12 5-12-2-6" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>';
+
+  const GEM_TIERS = ["emerald", "ruby", "diamond"];
+
+  // Cada marco destrava por tempo de sequência (months) OU por valor acumulado
+  // guardado nela (amount) — o que vier primeiro. Isso premia quem tem uma meta
+  // alta sem exigir que espere o mesmo número de meses de quem tem meta baixa.
   const STREAK_MILESTONES = [
+    { months: 36, amount: 50000, label: "Diamante", tier: "diamond" },
+    { months: 24, amount: 25000, label: "Rubi", tier: "ruby" },
+    { months: 18, amount: 10000, label: "Esmeralda", tier: "emerald" },
     { months: 12, label: "Ouro", tier: "gold" },
     { months: 6, label: "Prata", tier: "silver" },
     { months: 3, label: "Bronze", tier: "bronze" },
@@ -83,6 +95,7 @@
   let cloudUser = null;
   let unsubscribeCloud = null;
   let monthlyGoal = loadGoalLocal();
+  let goalHistory = loadGoalHistoryLocal();
 
   // ---- DOM refs ----
 
@@ -320,9 +333,11 @@
       try {
         const goalSnap = await goalDoc(user.uid).get();
         if (goalSnap.exists) {
-          monthlyGoal = goalSnap.data().amount || 0;
-        } else if (monthlyGoal > 0) {
-          await goalDoc(user.uid).set({ amount: monthlyGoal });
+          const data = goalSnap.data();
+          monthlyGoal = data.amount || 0;
+          goalHistory = data.history || {};
+        } else if (monthlyGoal > 0 || Object.keys(goalHistory).length > 0) {
+          await goalDoc(user.uid).set({ amount: monthlyGoal, history: goalHistory });
         }
       } catch (err) {
         console.warn("Erro ao carregar meta da nuvem:", err);
@@ -336,6 +351,7 @@
       syncStatus.hidden = true;
       transactions = loadTransactions();
       monthlyGoal = loadGoalLocal();
+      goalHistory = loadGoalHistoryLocal();
       render();
     }
   });
@@ -559,6 +575,45 @@
     }
   }
 
+  function loadGoalHistoryLocal() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY_GOAL_HISTORY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (err) {
+      console.warn("Não foi possível carregar o histórico de metas:", err);
+      return {};
+    }
+  }
+
+  function saveGoalHistoryLocal(history) {
+    try {
+      localStorage.setItem(STORAGE_KEY_GOAL_HISTORY, JSON.stringify(history));
+    } catch (err) {
+      console.warn("Não foi possível salvar o histórico de metas:", err);
+    }
+  }
+
+  function persistGoalHistory() {
+    if (cloudUser) {
+      goalDoc(cloudUser.uid)
+        .set({ history: goalHistory }, { merge: true })
+        .catch((err) => console.warn("Erro ao salvar histórico de metas na nuvem:", err));
+    } else {
+      saveGoalHistoryLocal(goalHistory);
+    }
+  }
+
+  // A meta usada para avaliar um mês fica travada na primeira vez que esse mês
+  // é avaliado (quando ele já fechou). Mudar a meta atual não altera meses
+  // antigos já travados.
+  function lockGoalForMonth(monthKey) {
+    if (goalHistory[monthKey] !== undefined) return goalHistory[monthKey];
+    if (monthlyGoal <= 0) return null;
+    goalHistory[monthKey] = monthlyGoal;
+    persistGoalHistory();
+    return monthlyGoal;
+  }
+
   // ---- Recap mensal & sequência ----
 
   function shiftMonthKey(key, delta) {
@@ -582,42 +637,53 @@
     return map;
   }
 
-  function getStreak() {
-    if (monthlyGoal <= 0) return 0;
-
+  // Percorre os meses fechados, mais recente primeiro, travando a meta de
+  // cada um e contando quantos seguidos bateram a meta (e quanto foi
+  // economizado nesses meses). `fromKey` permite recalcular "o estado antes
+  // deste mês" para detectar quando um marco novo foi desbloqueado.
+  function getStreakInfo(fromKey) {
     const balances = getMonthlyBalances();
-    let cursor = getPrevMonthKey();
-    let streak = 0;
+    let cursor = fromKey || getPrevMonthKey();
+    let months = 0;
+    let savings = 0;
 
-    while (balances[cursor] && balances[cursor].income - balances[cursor].expense >= monthlyGoal) {
-      streak++;
+    while (balances[cursor]) {
+      const goalForMonth = lockGoalForMonth(cursor);
+      if (goalForMonth === null) break;
+
+      const balance = balances[cursor].income - balances[cursor].expense;
+      if (balance < goalForMonth) break;
+
+      months++;
+      savings += balance;
       cursor = shiftMonthKey(cursor, -1);
     }
 
-    return streak;
+    return { months, savings };
   }
 
-  function getMilestone(streak) {
-    return STREAK_MILESTONES.find((m) => streak >= m.months) || null;
+  function getMilestone(months, savings) {
+    return STREAK_MILESTONES.find((m) => months >= m.months || (m.amount !== undefined && savings >= m.amount)) || null;
   }
 
   function renderStreakBadge() {
-    const streak = getStreak();
-    if (streak <= 0) {
+    const { months, savings } = getStreakInfo();
+    if (months <= 0) {
       streakBadge.hidden = true;
       return;
     }
 
-    const milestone = getMilestone(streak);
+    const milestone = getMilestone(months, savings);
     streakBadge.hidden = false;
-    streakBadge.classList.remove("tier-bronze", "tier-silver", "tier-gold");
-    streakIcon.innerHTML = milestone ? TROPHY_ICON : FLAME_ICON;
+    streakBadge.classList.remove("tier-bronze", "tier-silver", "tier-gold", "tier-emerald", "tier-ruby", "tier-diamond");
 
     if (milestone) {
       streakBadge.classList.add("tier-" + milestone.tier);
-      streakText.textContent = `${streak} meses · ${milestone.label}`;
+      streakIcon.innerHTML = GEM_TIERS.includes(milestone.tier) ? GEM_ICON : TROPHY_ICON;
+      streakText.textContent = `${months} meses · ${milestone.label}`;
     } else {
-      streakText.textContent = `${streak} ${streak === 1 ? "mês seguido" : "meses seguidos"}`;
+      streakIcon.innerHTML = FLAME_ICON;
+      streakText.textContent = `${months} ${months === 1 ? "mês seguido" : "meses seguidos"}`;
     }
   }
 
@@ -638,8 +704,6 @@
   }
 
   function checkMonthlyRecap() {
-    if (monthlyGoal <= 0) return;
-
     const prevKey = getPrevMonthKey();
     const prevTx = transactions.filter((t) => t.date.slice(0, 7) === prevKey);
     if (prevTx.length === 0) return;
@@ -653,15 +717,18 @@
     }
     if (alreadyShown) return;
 
+    const goalForMonth = lockGoalForMonth(prevKey);
+    if (goalForMonth === null) return;
+
     const income = sumBy(prevTx, "receita");
     const expense = sumBy(prevTx, "despesa");
     const saved = income - expense;
-    const hit = saved >= monthlyGoal;
+    const hit = saved >= goalForMonth;
     const monthLabel = capitalize(monthFormatter.format(new Date(prevKey + "-02T00:00:00Z")));
     const pool = hit ? RECAP_SUCCESS_MESSAGES : RECAP_MISS_MESSAGES;
     const pick = pool[Math.floor(Math.random() * pool.length)];
 
-    const parts = [pick(monthLabel, saved, monthlyGoal)];
+    const parts = [pick(monthLabel, saved, goalForMonth)];
 
     const topCategory = getTopCategoryInsight(prevTx);
     if (topCategory) {
@@ -686,17 +753,31 @@
       }
     }
 
-    const streak = getStreak();
-    const milestone = hit ? getMilestone(streak) : null;
-    if (milestone && streak === milestone.months) {
-      parts.push(`Você desbloqueou o troféu ${milestone.label}: ${streak} meses seguidos batendo a meta!`);
-    } else if (hit && streak > 1) {
-      parts.push(`Essa já é sua ${streak}ª meta seguida — sequência em chamas!`);
+    if (hit && saved >= goalForMonth * 1.25) {
+      const overPct = Math.round(((saved - goalForMonth) / goalForMonth) * 100);
+      parts.push(`E olha só: você superou a sua própria meta em ${overPct}% esse mês — impressionante!`);
+    }
+
+    let milestone = null;
+    if (hit) {
+      const current = getStreakInfo(prevKey);
+      const prior = getStreakInfo(beforeKey);
+      const currentMilestone = getMilestone(current.months, current.savings);
+      const priorMilestone = getMilestone(prior.months, prior.savings);
+
+      if (currentMilestone && currentMilestone !== priorMilestone) {
+        milestone = currentMilestone;
+        parts.push(
+          `Você desbloqueou o marco ${milestone.label}: ${current.months} meses seguidos e ${currencyFormatter.format(current.savings)} guardados na sequência!`
+        );
+      } else if (current.months > 1) {
+        parts.push(`Essa já é sua ${current.months}ª meta seguida — sequência em chamas!`);
+      }
     }
 
     monthBanner.classList.toggle("success", hit);
     monthBanner.classList.toggle("miss", !hit);
-    monthBannerIcon.innerHTML = hit ? TROPHY_ICON : TRENDING_ICON;
+    monthBannerIcon.innerHTML = hit ? (milestone && GEM_TIERS.includes(milestone.tier) ? GEM_ICON : TROPHY_ICON) : TRENDING_ICON;
     monthBannerTitle.textContent = hit ? "Meta batida!" : "Quase lá!";
     monthBannerMessage.textContent = parts.join(" ");
     monthBanner.hidden = false;
