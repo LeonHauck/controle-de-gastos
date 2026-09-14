@@ -9,7 +9,8 @@ Rastreador de despesas e receitas pessoais, com visual moderno em dark mode. Fei
 - Cadastro de despesas e receitas (descrição, valor, categoria, data)
 - Filtro por período (mês)
 - Resumo do período: receitas, despesas, saldo e número de transações
-- Gráfico de despesas por categoria
+- Gráfico de despesas por categoria, com percentual sobre o total
+- Painel de metas e previsão: meta de economia mensal, previsão de gastos do próximo mês (média dos últimos meses fechados) e receita necessária para cobrir gastos + bater a meta
 - Exclusão de transações
 - Sincronização entre dispositivos com login do Google (Firebase Auth + Firestore)
 - Funciona offline com `localStorage` quando não está logado
@@ -21,9 +22,10 @@ Basta abrir o arquivo [index.html](index.html) diretamente no navegador — não
 ## 📁 Estrutura
 
 ```
-index.html      # marcação e estrutura da página
-css/style.css   # tema dark e layout
-js/app.js       # lógica da aplicação (estado, persistência, renderização)
+index.html            # marcação e estrutura da página
+css/style.css         # tema dark e layout
+js/app.js             # lógica da aplicação (estado, persistência, renderização)
+js/firebase-config.js # chaves e inicialização do Firebase
 ```
 
 ## 🌐 Hospedagem
