@@ -1238,6 +1238,18 @@ tbody tr:last-child td {
   letter-spacing: 0.02em;
 }
 
+.app-footer a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.15s;
+}
+
+.app-footer a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
 /* Responsive */
 @media (max-width: 760px) {
   .app {
