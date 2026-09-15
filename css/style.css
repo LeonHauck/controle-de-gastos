@@ -939,12 +939,33 @@ input:focus {
   color: var(--good);
 }
 
+.form-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.cancel-edit-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 4px;
+  transition: color 0.15s;
+}
+
+.cancel-edit-btn:hover {
+  color: var(--text-primary);
+}
+
 .submit-btn {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  margin-top: 6px;
   padding: 12px;
   border-radius: var(--radius-sm);
   border: none;
@@ -964,6 +985,11 @@ input:focus {
 
 .submit-btn:active {
   transform: translateY(0);
+}
+
+.submit-icon {
+  display: flex;
+  align-items: center;
 }
 
 /* Chart */
@@ -1080,7 +1106,8 @@ tbody tr:last-child td {
 }
 
 .col-actions {
-  width: 40px;
+  width: 72px;
+  white-space: nowrap;
 }
 
 .cat-badge {
@@ -1116,6 +1143,7 @@ tbody tr:last-child td {
   color: var(--critical);
 }
 
+.edit-btn,
 .delete-btn {
   background: none;
   border: none;
@@ -1123,9 +1151,14 @@ tbody tr:last-child td {
   cursor: pointer;
   padding: 7px;
   border-radius: 8px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   transition: color 0.15s, background 0.15s;
+}
+
+.edit-btn:hover {
+  color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
 }
 
 .delete-btn:hover {

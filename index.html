@@ -153,10 +153,15 @@
           <label for="category">Categoria</label>
           <select id="category"></select>
 
-          <button type="submit" class="submit-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            Adicionar
-          </button>
+          <div class="form-actions">
+            <button type="submit" class="submit-btn">
+              <span id="submit-icon" class="submit-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              </span>
+              <span id="submit-label">Adicionar</span>
+            </button>
+            <button type="button" id="cancel-edit-btn" class="cancel-edit-btn" hidden>Cancelar edição</button>
+          </div>
         </form>
       </div>
 

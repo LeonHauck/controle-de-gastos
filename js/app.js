@@ -56,6 +56,11 @@
   const GEM_ICON =
     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M6 3h12l4 6-10 12L2 9l4-6Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M2 9h20M9 3l-2 6 5 12 5-12-2-6" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>';
 
+  const ADD_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+
+  const SAVE_ICON =
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
   const MEDAL_ICON =
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 2 6 9m9-7 3 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="m6 9 2.5 5M18 9l-2.5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="15" r="7" stroke="currentColor" stroke-width="1.6"/><path d="m12 11.3 1.1 2.2 2.5.35-1.8 1.75.4 2.4-2.2-1.15-2.2 1.15.4-2.4-1.8-1.75 2.5-.35 1.1-2.2Z" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/></svg>';
 
@@ -106,6 +111,7 @@
   let achievements = loadAchievementsLocal();
   let modalMonthKeys = [];
   let modalCurrentIndex = -1;
+  let editingId = null;
 
   // ---- DOM refs ----
 
@@ -117,6 +123,9 @@
   const dateInput = document.getElementById("date");
   const categorySelect = document.getElementById("category");
   const periodSelect = document.getElementById("period-select");
+  const submitIcon = document.getElementById("submit-icon");
+  const submitLabel = document.getElementById("submit-label");
+  const cancelEditBtn = document.getElementById("cancel-edit-btn");
 
   const statIncome = document.getElementById("stat-income");
   const statExpense = document.getElementById("stat-expense");
@@ -210,6 +219,26 @@
       date: dateInput.value,
     };
 
+    if (editingId) {
+      const id = editingId;
+      if (cloudUser) {
+        userCollection(cloudUser.uid)
+          .doc(id)
+          .update(data)
+          .catch((err) => {
+            console.warn("Erro ao atualizar na nuvem:", err);
+            alert("Não foi possível salvar as alterações. Tente novamente.");
+          });
+      } else {
+        const idx = transactions.findIndex((t) => t.id === id);
+        if (idx !== -1) transactions[idx] = { id, ...data };
+        saveTransactions();
+        render();
+      }
+      cancelEdit();
+      return;
+    }
+
     if (cloudUser) {
       userCollection(cloudUser.uid)
         .add(data)
@@ -231,10 +260,54 @@
     typeButtons[0].click();
   });
 
+  function startEdit(id) {
+    const t = transactions.find((tx) => tx.id === id);
+    if (!t) return;
+
+    editingId = id;
+
+    currentType = t.type;
+    typeInput.value = t.type;
+    typeButtons.forEach((b) => b.classList.toggle("active", b.dataset.type === t.type));
+    typeSlider.classList.toggle("slider-receita", t.type === "receita");
+    populateCategorySelect();
+
+    descriptionInput.value = t.description || "";
+    amountInput.value = t.amount;
+    dateInput.value = t.date;
+    categorySelect.value = t.category;
+
+    submitIcon.innerHTML = SAVE_ICON;
+    submitLabel.textContent = "Salvar alterações";
+    cancelEditBtn.hidden = false;
+
+    form.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function cancelEdit() {
+    editingId = null;
+    form.reset();
+    dateInput.value = toISODate(new Date());
+    typeButtons[0].click();
+    submitIcon.innerHTML = ADD_ICON;
+    submitLabel.textContent = "Adicionar";
+    cancelEditBtn.hidden = true;
+  }
+
+  cancelEditBtn.addEventListener("click", cancelEdit);
+
   tbody.addEventListener("click", (e) => {
-    const btn = e.target.closest(".delete-btn");
-    if (!btn) return;
-    const id = btn.dataset.id;
+    const editBtn = e.target.closest(".edit-btn");
+    if (editBtn) {
+      startEdit(editBtn.dataset.id);
+      return;
+    }
+
+    const deleteBtn = e.target.closest(".delete-btn");
+    if (!deleteBtn) return;
+    const id = deleteBtn.dataset.id;
+
+    if (editingId === id) cancelEdit();
 
     if (cloudUser) {
       userCollection(cloudUser.uid)
@@ -554,6 +627,9 @@
         <td data-label="Categoria"><span class="cat-badge"><span class="cat-dot" style="background:${meta.color}; color:${meta.color};"></span>${escapeHtml(meta.label)}</span></td>
         <td data-label="Valor" class="amount-cell ${amountClass}">${sign} ${currencyFormatter.format(t.amount)}</td>
         <td class="col-actions">
+          <button class="edit-btn" data-id="${t.id}" aria-label="Editar transação">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
           <button class="delete-btn" data-id="${t.id}" aria-label="Excluir transação">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m2 0-1 13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
