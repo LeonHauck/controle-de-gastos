@@ -841,19 +841,33 @@
     achievementsSection.hidden = !any;
     if (!any) return;
 
-    setAchvPill(achvMedal, medals, MEDAL_ICON, "Medalha");
-    setAchvPill(achvEmerald, gems.emerald, GEM_ICON, "Esmeralda");
-    setAchvPill(achvRuby, gems.ruby, GEM_ICON, "Rubi");
-    setAchvPill(achvDiamond, gems.diamond, GEM_ICON, "Diamante");
+    setAchvPill(achvMedal, medals, MEDAL_ICON, "Medalha", "Medalha: +1 toda vez que você bate a meta do mês, mesmo avulso. Contador vitalício, não reseta.");
+    setAchvPill(
+      achvEmerald,
+      gems.emerald,
+      GEM_ICON,
+      "Esmeralda",
+      "Esmeralda: ganha quando você supera a própria meta em 15% ou mais num mês."
+    );
+    setAchvPill(achvRuby, gems.ruby, GEM_ICON, "Rubi", "Rubi: ganha quando você supera a própria meta em 25% ou mais num mês.");
+    setAchvPill(
+      achvDiamond,
+      gems.diamond,
+      GEM_ICON,
+      "Diamante",
+      "Diamante: ganha quando você supera a própria meta em 40% ou mais num mês."
+    );
   }
 
-  function setAchvPill(el, count, icon, label) {
+  function setAchvPill(el, count, icon, label, tooltip) {
     if (count <= 0) {
       el.hidden = true;
       return;
     }
     el.hidden = false;
     el.innerHTML = `${icon} ${label} <b>×${count}</b>`;
+    el.setAttribute("data-tooltip", tooltip);
+    el.setAttribute("tabindex", "0");
   }
 
   // A meta usada para avaliar um mês fica travada na primeira vez que esse mês
@@ -929,14 +943,23 @@
     const milestone = getMilestone(months, savings);
     streakBadge.hidden = false;
     streakBadge.classList.remove("tier-bronze", "tier-silver", "tier-gold");
+    streakBadge.setAttribute("tabindex", "0");
 
     if (milestone) {
       streakBadge.classList.add("tier-" + milestone.tier);
       streakIcon.innerHTML = TROPHY_ICON;
       streakText.textContent = `${months} meses · ${milestone.label}`;
+      streakBadge.setAttribute(
+        "data-tooltip",
+        `Troféu ${milestone.label}: sequência atual de ${milestone.months} meses seguidos batendo a meta.`
+      );
     } else {
       streakIcon.innerHTML = FLAME_ICON;
       streakText.textContent = `${months} ${months === 1 ? "mês seguido" : "meses seguidos"}`;
+      streakBadge.setAttribute(
+        "data-tooltip",
+        `Sequência atual: ${months} ${months === 1 ? "mês seguido" : "meses seguidos"} batendo a meta. Bata 3 meses seguidos pra ganhar o troféu Bronze.`
+      );
     }
   }
 
@@ -1075,10 +1098,27 @@
     });
 
     const badgeDefs = [];
-    if (report.badges.medal) badgeDefs.push({ icon: MEDAL_ICON, label: "Medalha", color: "#d4af37" });
-    if (report.badges.gem) badgeDefs.push({ icon: GEM_ICON, label: report.badges.gem.label, color: tierColor(report.badges.gem.gem) });
+    if (report.badges.medal)
+      badgeDefs.push({
+        icon: MEDAL_ICON,
+        label: "Medalha",
+        color: "#d4af37",
+        tooltip: "Medalha: ganha por bater a meta neste mês. Contador vitalício, não reseta.",
+      });
+    if (report.badges.gem)
+      badgeDefs.push({
+        icon: GEM_ICON,
+        label: report.badges.gem.label,
+        color: tierColor(report.badges.gem.gem),
+        tooltip: `${report.badges.gem.label}: você superou a própria meta em ${Math.round(report.badges.gem.threshold * 100)}% ou mais neste mês.`,
+      });
     if (report.badges.trophy)
-      badgeDefs.push({ icon: TROPHY_ICON, label: `Troféu ${report.badges.trophy.label}`, color: tierColor(report.badges.trophy.tier) });
+      badgeDefs.push({
+        icon: TROPHY_ICON,
+        label: `Troféu ${report.badges.trophy.label}`,
+        color: tierColor(report.badges.trophy.tier),
+        tooltip: `Troféu ${report.badges.trophy.label}: você bateu ${report.badges.trophy.months} meses seguidos batendo a meta.`,
+      });
 
     modalBadges.innerHTML = "";
     badgeDefs.forEach((b) => {
@@ -1087,6 +1127,8 @@
       span.style.background = `color-mix(in oklab, ${b.color} 18%, transparent)`;
       span.style.color = b.color;
       span.innerHTML = `${b.icon} ${b.label}`;
+      span.setAttribute("data-tooltip", b.tooltip);
+      span.setAttribute("tabindex", "0");
       modalBadges.appendChild(span);
     });
 
